@@ -327,4 +327,4 @@ plot_top_10_final_goals <- ggplot(top_10_final_goals, aes(x = PELAAJA)) +
   theme_minimal() +
   coord_flip()
 #
-ggsave("images/topten_final_goals.jpg", plot = plot_top_10_raw, width = 8, height = 8, dpi = 300)
+ggsave("images/topten_final_goals.jpg", plot = plot_top_10_final_goals, width = 8, height = 8, dpi = 300)
