@@ -1,0 +1,324 @@
+
+
+
+testi$O <- as.numeric(testi$O)
+testi$M <- as.numeric(testi$M)
+testi$S <- as.numeric(testi$S)
+testi$P <- as.numeric(testi$P)
+testi$R <- as.numeric(testi$R)
+testi$L <- as.numeric(testi$L)
+testi$`L%` <- as.numeric(testi$`L%`)
+testi$`+` <- as.numeric(testi$`+`)
+testi$`-` <- as.numeric(testi$`-`)
+testi$`+/-` <- as.numeric(testi$`+/-`)
+#
+#There are two same name for to different players - ID would be nice
+testi %>% group_by(PELAAJA, kausi) %>% count() %>% arrange(desc(n)) %>% head(5)
+#
+
+testi <- testi %>% mutate(aloitusvuosi = as.integer(str_sub(kausi,1,4)),
+                          viimeinenvuosi = as.integer(str_sub(kausi,6,9)))
+#
+testi2 <- testi  %>%  group_by(PELAAJA) %>% mutate(kaudet = n())
+testi3 <- testi2 %>% filter(kausi == "2024-2025")
+
+pelaajat_yv <-
+  testi3 %>%
+  group_by(PELAAJA) %>%
+  summarise(
+    PELAAJA = first(PELAAJA),
+    JOUKKUE = first(JOUKKUE),
+    aloitus = min(aloitusvuosi),
+    viimeinen = max(viimeinenvuosi),
+    ura =  paste0(aloitus, "–", ifelse(viimeinen == max(testi2$viimeinenvuosi), yes = "", no = viimeinen)),
+    O = sum(O), 
+    L = sum(L),
+    M = sum(M),
+    "M/O" = M / O,
+    "L/O" = L / O,
+    raw = M / L
+  )
+#
+pelaajat_yv_25_all <-
+  testi2 %>%
+  group_by(PELAAJA) %>%
+  summarise(
+    PELAAJA = first(PELAAJA),
+    aloitus = min(aloitusvuosi),
+    viimeinen = max(viimeinenvuosi),
+    ura =  paste0(aloitus, "–", ifelse(viimeinen == max(testi2$viimeinenvuosi), yes = "", no = viimeinen)),
+    O = sum(O), 
+    L = sum(L),
+    M = sum(M),
+    "M/O" = M / O,
+    "L/O" = L / O,
+    raw = M / L
+  )
+
+pelaajat_yv_25 <- pelaajat_yv %>% filter(viimeinen==2025, L >0)
+#
+raw_limit_09 <- quantile(pelaajat_yv_25 %>% pull(raw),0.9, na.rm=T)
+raw_limit_07 <- quantile(pelaajat_yv_25 %>% pull(raw),0.7, na.rm=T)
+raw_limit_05 <- quantile(pelaajat_yv_25 %>% pull(raw),0.5, na.rm=T)
+raw_limit_03 <- quantile(pelaajat_yv_25 %>% pull(raw),0.3, na.rm=T)
+#
+lo_limit_09 <- quantile(pelaajat_yv_25 %>% pull(`L/O`),0.9, na.rm=T)
+lo_limit_07 <- quantile(pelaajat_yv_25 %>% pull(`L/O`),0.7, na.rm=T)
+lo_limit_05 <- quantile(pelaajat_yv_25 %>% pull(`L/O`),0.5, na.rm=T)
+lo_limit_03 <- quantile(pelaajat_yv_25 %>% pull(`L/O`),0.3, na.rm=T)
+#
+
+
+
+pelaajat_yv_25 <-  pelaajat_yv_25 %>% mutate(raw_luokka =  case_when(raw > raw_limit_09~ "Very High,%",
+                                                                     raw > raw_limit_07 ~ "High,%", 
+                                                                     raw > raw_limit_05 ~ "Average High,%", 
+                                                                     raw > raw_limit_03 ~ "Average Low,%", 
+                                                                     raw <= raw_limit_03 ~ "Low,%"))
+#
+pelaajat_yv_25 <-  pelaajat_yv_25 %>% mutate("L/O_luokka" =  case_when(`L/O` > lo_limit_09 ~ "Very High,spg",
+                                                                       `L/O` > lo_limit_07 ~ "High,spg", 
+                                                                       `L/O` > lo_limit_05 ~ "Average High,spg",
+                                                                       `L/O` > lo_limit_03 ~ "Average Low,spg", 
+                                                                       `L/O` <=  lo_limit_03 ~ "Low,spg"))
+#
+pelaajat_yv_25$raw_luokka <- factor(pelaajat_yv_25$raw_luokka, levels = c("Low,%","Average Low,%","Average High,%", "High,%", "Very High,%"))
+#
+pelaajat_yv_25$`L/O_luokka` <- factor(pelaajat_yv_25$`L/O_luokka`, levels = c("Low,spg","Average Low,spg","Average High,spg", "High,spg", "Very High,spg"))
+#
+#Let us calculate means etc only for player with more than 10 shots. this is based on last 4 + ongoing season
+mean_x <- mean(pelaajat_yv_25_all %>% filter(L > 10) %>% pull(raw))
+median_x <- median(pelaajat_yv_25_all %>% filter(L > 10) %>% pull(raw))
+var_x <- var(pelaajat_yv_25_all %>% filter(L > 10) %>% pull(raw))
+
+# Estimate Beta parameters using Method of Moments
+alpha <- mean_x * ((mean_x * (1 - mean_x) / var_x) - 1)
+beta <- (1 - mean_x) * ((mean_x * (1 - mean_x) / var_x) - 1)
+#
+pelaajat_yv_25 <- pelaajat_yv_25 %>%
+  mutate(eb_raw = (M + alpha) / (L + alpha + beta), alhpa_new = M+ alpha, beta_new = L + alpha + beta)
+#
+eb_limit_09 <- quantile(pelaajat_yv_25 %>% pull(eb_raw),0.9, na.rm=T)
+eb_limit_07 <- quantile(pelaajat_yv_25 %>% pull(eb_raw),0.7, na.rm=T)
+eb_limit_05 <- quantile(pelaajat_yv_25 %>% pull(eb_raw),0.5, na.rm=T)
+eb_limit_03 <- quantile(pelaajat_yv_25 %>% pull(eb_raw),0.3, na.rm=T)
+#
+pelaajat_yv_25 <-  pelaajat_yv_25 %>% mutate(eb_raw_luokka =  case_when(eb_raw > eb_limit_09~ "Very High,%",
+                                                                        eb_raw > eb_limit_07 ~ "High,%", 
+                                                                        eb_raw > eb_limit_05 ~ "Average High,%", 
+                                                                        eb_raw > eb_limit_03 ~ "Average Low,%", 
+                                                                        eb_raw <= eb_limit_03 ~ "Low,%"))
+#
+pelaajat_yv_25$eb_raw_luokka <- factor(pelaajat_yv_25$eb_raw_luokka, levels = c("Low,%","Average Low,%","Average High,%", "High,%", "Very High,%"))
+#
+pelaajat_yv_25 <- pelaajat_yv_25 %>% unite("yhd_luokka_eb",eb_raw_luokka, `L/O_luokka`, sep = " -- ", remove = FALSE)
+#
+#pelaajat_yv_25 %>% ggplot(aes(x=`L/O`, y=raw)) +
+#  geom_point(aes(color=raw_luokka)) 
+#  facet_wrap(~raw_luokka)
+#
+pelaajat_yv_25 %>% count(`L/O_luokka`,raw_luokka)
+kok2 <-pelaajat_yv_25 %>% count(`L/O_luokka`,eb_raw_luokka) %>% pivot_wider(names_from = eb_raw_luokka, values_from = n)
+#
+#kom_pelaajat <- pelaajat_yv_25 %>% filter(raw_luokka =="Erittäin korkea maaliodottama")
+#
+xxx_pelaajat <- pelaajat_yv_25 %>% filter(eb_raw_luokka=="Low,%", `L/O_luokka` %in% c("Very High,spg", "High,spg")) %>% arrange(desc(L)) %>% head(5)
+xxx_pelaajat2 <- pelaajat_yv_25 %>% filter(eb_raw_luokka=="High,%", `L/O_luokka` %in% c("Low,spg"))  %>% arrange(desc(L)) %>% head(5)
+xxx_pelaajat3 <- pelaajat_yv_25 %>% filter(eb_raw_luokka=="Very High,%", `L/O_luokka` == "Very High,spg")  %>% arrange(desc(L)) %>% head(5)
+#
+top_10_eb <- pelaajat_yv_25 %>% arrange(desc(eb_raw)) %>% head(10)
+top_10_raw <- pelaajat_yv_25 %>% arrange(desc(raw)) %>% head(10)
+#estBetaParams(mu_, var_)
+
+#pelaajat_yv_25 %>% ggplot(aes(x= `L/O`, eb_raw)) +
+#  geom_point() +
+#  geom_vline(xintercept=lo_limit_03) +
+#  geom_vline(xintercept=lo_limit_05) +
+#  geom_vline(xintercept=lo_limit_07) +
+#  geom_vline(xintercept=lo_limit_09) +
+#  geom_hline(yintercept=raw_limit_03) +
+#  geom_hline(yintercept=raw_limit_05) +
+#  geom_hline(yintercept=raw_limit_07) +
+#  geom_hline(yintercept=raw_limit_09) 
+#
+pelaajat_yv_25 %>% ggplot(aes(x= `L/O`, eb_raw)) +
+  geom_point()
+#
+pelaajat_yv_25 %>% ggplot(aes(x= raw, eb_raw)) +
+  geom_point()
+
+#players %>%
+#  head(n = 10L) %>%
+#  select(player, shots, goals, raw) %>%
+#  mutate(
+#    raw = ifelse(is.na(raw), yes = "", no = sprintf("%.2f%%", raw * 100))
+#  )
+
+#pelaajat_yv_25 %>%
+#  filter(L > 0) %>%
+#  ggplot(aes(raw)) +
+#  geom_density() +
+#  scale_x_continuous(labels = percent) +
+#scale_y_continuous(labels = percent, limits = c(0,0.3)) +
+#  labs(
+#    subtitle = "Career shooting percentages per player position",
+#    x = "raw career shooting percentage"
+#  )
+#
+
+
+
+
+#
+top_10_eb <-top_10_eb %>%  mutate("Rank" = rank(desc(eb_raw)))
+#
+ggplot(top_10_eb, aes(x = eb_raw, y = reorder(PELAAJA, -Rank))) +
+  geom_point(size = 3) +  
+  geom_point(aes(x = raw, y = reorder(PELAAJA, -Rank)),shape = 5) + 
+  geom_segment(aes(x = 0.00, xend = eb_raw, 
+                   y = reorder(PELAAJA, -Rank), 
+                   yend = reorder(PELAAJA, -Rank)), 
+               color = "black", size = 0.3) + 
+  geom_segment(aes(x = 0.00, xend = raw, 
+                   y = reorder(PELAAJA, -Rank), 
+                   yend = reorder(PELAAJA, -Rank)), 
+               color = "black", size = 0.3,linetype = "dotted") +  
+  scale_x_continuous(breaks = seq(0,0.35, 0.025)) +
+  labs(
+    title = "Top-10 Adjusted Shooting Percentage in F-liiga 2024-2025",
+    #subtitle = "Dotted lines are raw percentages",
+    x = "Shooting Percentage",
+    y = NULL
+  ) +
+  theme_minimal() +
+  theme(
+    panel.grid.major.y = element_blank(),  
+    axis.text.y = element_text(size = 12), 
+    axis.text.x = element_text(size = 10),
+    plot.title = element_text(size = 14, face = "bold"),
+    plot.subtitle = element_text(size = 14),
+    plot.caption = element_text(size = 9, hjust = 1)
+  )
+#
+top_10_raw <-top_10_raw %>%  mutate("Rank" = rank(desc(raw)))
+#
+ggplot(top_10_raw, aes(x = eb_raw, y = reorder(PELAAJA, -Rank))) +
+  geom_point(size = 3) +  # Plot the points
+  geom_point(aes(x = raw, y = reorder(PELAAJA, -Rank)),shape = 5) + 
+  geom_segment(aes(x = 0.00, xend = eb_raw, 
+                   y = reorder(PELAAJA, -Rank), 
+                   yend = reorder(PELAAJA, -Rank)), 
+               color = "black", size = 0.3) +  
+  geom_segment(aes(x = 0.00, xend = raw, 
+                   y = reorder(PELAAJA, -Rank), 
+                   yend = reorder(PELAAJA, -Rank)), 
+               color = "black", size = 0.3,linetype = "dotted") +  
+  scale_x_continuous(breaks = seq(0,1, 0.05)) +
+  labs(
+    title = "Top-10 Raw Shooting Percentage in F-liiga 2024-2025",
+    #subtitle = "Black lines are adjusted percentages",
+    x = "Shooting Percentage",
+    y = NULL
+  ) +
+  theme_minimal() +
+  theme(
+    panel.grid.major.y = element_blank(),  
+    axis.text.y = element_text(size = 12), 
+    axis.text.x = element_text(size = 10),
+    plot.title = element_text(size = 14, face = "bold"),
+    plot.subtitle = element_text(size = 14),
+    plot.caption = element_text(size = 9, hjust = 1)
+  )
+
+simulate_total_goals <- function(shots_per_game, alpha, beta, num_simulations = 1000) {
+  
+  replicate(num_simulations, {
+    total_goals <- sum(sapply(shots_per_game, function(n) {
+      theta <- rbeta(1, alpha, beta)  
+      rbinom(1, size = n, prob = theta)  
+    }))
+    total_goals
+  })
+}
+#
+games_left$JOUKKUE <- str_replace(games_left$JOUKKUE, "Nokian KrP", "KrP")
+games_left$JOUKKUE <- str_replace(games_left$JOUKKUE, "FBC Turku", "FBC")
+games_left$JOUKKUE <- str_replace(games_left$JOUKKUE, "EräViikingit", "ErVi")
+pelaajat_yv_25 <- left_join(pelaajat_yv_25, games_left %>% select(JOUKKUE,`Games Left`))
+#tulevat_ottelut <- data.frame(JOUKKUE = c("Classic", "Oilers", "KrP", "SPV","Indians", "TPS", "Happee", "FBC", "Jymy", "ErVi", "OLS", "LASB"),
+#                              ottelut = c(14,15,17,15,15,15,15,16,14,16,14,16) )
+
+#
+#apulista <- raw %>% filter(kausi=="2024-2025") %>% select(PELAAJA, JOUKKUE)  
+#
+#apulista <- left_join(apulista, tulevat_ottelut)
+#pelaajat_yv_25 <- left_join(pelaajat_yv_25, apulista)
+
+#df <- data.frame(
+#  Player = c("Player 1", "Player 2", "Player 3"), # Player names
+#  Alpha_Post = c(5, 3, 7),  # Posterior alpha (success rate)
+#  Beta_Post = c(15, 20, 10),  # Posterior beta (failure rate)
+#  Shots_Per_Game = c(8, 12, 10),  # Average shots per game
+#  Num_Games = c(10, 10, 10)  # Number of games to simulate (next 10 games)
+#)
+#
+simulate_player_goals <- function(alpha, beta, shots_per_game, num_games, num_simulations = 1000) {
+  replicate(num_simulations, {
+    total_goals <- sum(sapply(1:num_games, function(x) {
+      theta <- rbeta(1, alpha, beta)  
+      shots <- rpois(1, lambda = shots_per_game)  
+      rbinom(1, size = shots, prob = theta)  
+    }))
+    return(total_goals)
+  })
+}
+#
+pelaajat_yv_25$Simulated_Goals <- lapply(1:nrow(pelaajat_yv_25), function(i) {
+  simulate_player_goals(
+    alpha = pelaajat_yv_25$alhpa_new[i],
+    beta = pelaajat_yv_25$beta_new[i],
+    shots_per_game = pelaajat_yv_25$`L/O`[i],
+    num_games = pelaajat_yv_25$`Games Left`[i]
+  )
+})
+
+
+pelaajat_yv_25$Mean_Goals <- sapply(pelaajat_yv_25$Simulated_Goals, mean) 
+pelaajat_yv_25$CI_Lower <- sapply(pelaajat_yv_25$Simulated_Goals, function(sim) quantile(sim, 0.1))  
+pelaajat_yv_25$CI_Upper <- sapply(pelaajat_yv_25$Simulated_Goals, function(sim) quantile(sim, 0.9))  
+#
+pelaajat_yv_25$Final_Goals <- pelaajat_yv_25$M+pelaajat_yv_25$Mean_Goals
+pelaajat_yv_25$Final_CI_Lower <- pelaajat_yv_25$M+pelaajat_yv_25$CI_Lower
+pelaajat_yv_25$Final_CI_Upper <- pelaajat_yv_25$M+pelaajat_yv_25$CI_Upper
+
+#
+
+
+#
+top_10_final_goals <- pelaajat_yv_25[order(pelaajat_yv_25$Final_Goals), ]
+top_10_final_goals$PELAAJA <- factor(top_10_final_goals$PELAAJA, levels = top_10_final_goals$PELAAJA)
+top_10_final_goals <- top_10_final_goals %>% arrange(desc(Simulated_Goals)) %>% head(10)
+
+#
+ggplot(top_10_final_goals, aes(x = PELAAJA)) +
+  # Add credibility intervals as horizontal segments
+  geom_segment(aes(
+    x = PELAAJA,
+    xend = PELAAJA,
+    y = 0,
+    yend = M
+  ), color = "black", size = 1) +
+  geom_segment(aes(
+    x = PELAAJA,
+    xend = PELAAJA,
+    y = Final_CI_Lower,
+    yend = Final_CI_Upper
+  ), color = "gray", size = 1) +
+  geom_point(aes(y = Final_Goals), color = "black", size = 2,shape=5) +
+  scale_y_continuous(breaks = seq(0, 50, 5)) +
+  labs(
+    title = "F-liiga Prediction: Top-10 Goal Scorers End of Season 2024-2025",
+    x = "Player",
+    y = "Predicted Goals") +
+  theme_minimal() +
+  coord_flip()
