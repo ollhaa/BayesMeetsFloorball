@@ -123,9 +123,16 @@ pelaajat_yv_25 %>% count(`L/O_luokka`,raw_luokka)
 summary_table <-pelaajat_yv_25 %>% count(`L/O_luokka`,eb_raw_luokka) %>% pivot_wider(names_from = eb_raw_luokka, values_from = n)
 #
 #
-xxx_pelaajat <- pelaajat_yv_25 %>% filter(eb_raw_luokka=="Low,%", `L/O_luokka` %in% c("Very High,spg", "High,spg")) %>% arrange(desc(L)) %>% head(5)
-xxx_pelaajat2 <- pelaajat_yv_25 %>% filter(eb_raw_luokka=="High,%", `L/O_luokka` %in% c("Low,spg"))  %>% arrange(desc(L)) %>% head(5)
-xxx_pelaajat3 <- pelaajat_yv_25 %>% filter(eb_raw_luokka=="Very High,%", `L/O_luokka` == "Very High,spg")  %>% arrange(desc(L)) %>% head(5)
+xxx_pelaajat <- pelaajat_yv_25 %>% filter(eb_raw_luokka=="Low,%", `L/O_luokka` %in% c("Very High,spg", "High,spg")) %>% arrange(desc(L)) %>% head(5) %>%
+  select(PELAAJA,JOUKKUE,O,L,M,`M/O`,`L/O`,raw,eb_raw,yhd_luokka_eb) %>% rename("Adjusted" = eb_raw)
+xxx_pelaajat2 <- pelaajat_yv_25 %>% filter(eb_raw_luokka=="High,%", `L/O_luokka` %in% c("Low,spg"))  %>% arrange(desc(L)) %>% head(5) %>%
+  select(PELAAJA,JOUKKUE,O,L,M,`M/O`,`L/O`,raw,eb_raw,yhd_luokka_eb) %>% rename("Adjusted" = eb_raw)
+xxx_pelaajat3 <- pelaajat_yv_25 %>% filter(eb_raw_luokka=="Very High,%", `L/O_luokka` == "Very High,spg")  %>% arrange(desc(L)) %>% head(5) %>%
+  select(PELAAJA,JOUKKUE,O,L,M,`M/O`,`L/O`,raw,eb_raw,yhd_luokka_eb) %>% rename("Adjusted" = eb_raw)
+#
+write_csv(xxx_pelaajat, file = "data/players_low_eb_high_spg.csv")
+write_csv(xxx_pelaajat, file = "data/players_high_eb_low_spg.csv")
+write_csv(xxx_pelaajat, file = "data/players_veryhigh_eb_high_spg.csv")
 #
 top_10_eb <- pelaajat_yv_25 %>% arrange(desc(eb_raw)) %>% head(10)
 top_10_raw <- pelaajat_yv_25 %>% arrange(desc(raw)) %>% head(10)
@@ -292,9 +299,13 @@ pelaajat_yv_25$Final_CI_Upper <- pelaajat_yv_25$M+pelaajat_yv_25$CI_Upper
 top_10_final_goals <- pelaajat_yv_25[order(pelaajat_yv_25$Final_Goals), ]
 top_10_final_goals$PELAAJA <- factor(top_10_final_goals$PELAAJA, levels = top_10_final_goals$PELAAJA)
 top_10_final_goals <- top_10_final_goals %>% arrange(desc(Simulated_Goals)) %>% head(10)
+top_10_final_goals <- top_10_final_goals %>% select(PELAAJA,JOUKKUE,O,L,M,`M/O`,`L/O`,raw,eb_raw,alhpa_new,beta_new,`Games Left`,Simulated_Goals,CI_Lower,
+                                                    CI_Upper,Final_Goals,Final_CI_Lower,Final_CI_Upper) %>% rename("Adjusted" = eb_raw)
 
 #
-ggplot(top_10_final_goals, aes(x = PELAAJA)) +
+write_csv(top_10_final_goals, file = "data/summary_top_10_final_goals.csv")
+#
+plot_top_10_final_goals <- ggplot(top_10_final_goals, aes(x = PELAAJA)) +
   geom_segment(aes(
     x = PELAAJA,
     xend = PELAAJA,
@@ -315,3 +326,5 @@ ggplot(top_10_final_goals, aes(x = PELAAJA)) +
     y = "Predicted Goals") +
   theme_minimal() +
   coord_flip()
+#
+ggsave("images/topten_final_goals.jpg", plot = plot_top_10_raw, width = 8, height = 8, dpi = 300)
