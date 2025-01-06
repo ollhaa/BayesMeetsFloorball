@@ -5,7 +5,7 @@ library(rvest)
 library(htmlTable)
 library(RSelenium)
 library(httr)
-library(scales)
+
 #####
 # just for testing
 url <- "https://tulospalvelu.fliiga.com/category/402!sb2024/statistics/points"
@@ -193,7 +193,7 @@ get_rest_games <- function(){
 
 
 #Download stats for last x seasons. 4 means this plus the last 4
-testi <- get_data(4)
-games_left <- get_rest_games()
+#testi <- get_data(4)
+#games_left <- get_rest_games()
 #
 

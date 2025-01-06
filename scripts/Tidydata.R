@@ -1,36 +1,42 @@
+source("scripts/Webscraping.R")
+#
+library(tidyverse)
+library(scales)
+#
+data <- get_data(4)
+games_left <- get_rest_games()
 
-
-
-testi$O <- as.numeric(testi$O)
-testi$M <- as.numeric(testi$M)
-testi$S <- as.numeric(testi$S)
-testi$P <- as.numeric(testi$P)
-testi$R <- as.numeric(testi$R)
-testi$L <- as.numeric(testi$L)
-testi$`L%` <- as.numeric(testi$`L%`)
-testi$`+` <- as.numeric(testi$`+`)
-testi$`-` <- as.numeric(testi$`-`)
-testi$`+/-` <- as.numeric(testi$`+/-`)
+#
+data$O <- as.numeric(data$O)
+data$M <- as.numeric(data$M)
+data$S <- as.numeric(data$S)
+data$P <- as.numeric(data$P)
+data$R <- as.numeric(data$R)
+data$L <- as.numeric(data$L)
+data$`L%` <- as.numeric(data$`L%`)
+data$`+` <- as.numeric(data$`+`)
+data$`-` <- as.numeric(data$`-`)
+data$`+/-` <- as.numeric(data$`+/-`)
 #
 #There are two same name for to different players - ID would be nice
-testi %>% group_by(PELAAJA, kausi) %>% count() %>% arrange(desc(n)) %>% head(5)
+data %>% group_by(PELAAJA, kausi) %>% count() %>% arrange(desc(n)) %>% head(5)
 #
 
-testi <- testi %>% mutate(aloitusvuosi = as.integer(str_sub(kausi,1,4)),
+data <- data %>% mutate(aloitusvuosi = as.integer(str_sub(kausi,1,4)),
                           viimeinenvuosi = as.integer(str_sub(kausi,6,9)))
 #
-testi2 <- testi  %>%  group_by(PELAAJA) %>% mutate(kaudet = n())
-testi3 <- testi2 %>% filter(kausi == "2024-2025")
+data2 <- data  %>%  group_by(PELAAJA) %>% mutate(kaudet = n())
+data3 <- data2 %>% filter(kausi == "2024-2025")
 
 pelaajat_yv <-
-  testi3 %>%
+  data3 %>%
   group_by(PELAAJA) %>%
   summarise(
     PELAAJA = first(PELAAJA),
     JOUKKUE = first(JOUKKUE),
     aloitus = min(aloitusvuosi),
     viimeinen = max(viimeinenvuosi),
-    ura =  paste0(aloitus, "–", ifelse(viimeinen == max(testi2$viimeinenvuosi), yes = "", no = viimeinen)),
+    ura =  paste0(aloitus, "–", ifelse(viimeinen == max(data2$viimeinenvuosi), yes = "", no = viimeinen)),
     O = sum(O), 
     L = sum(L),
     M = sum(M),
@@ -40,13 +46,13 @@ pelaajat_yv <-
   )
 #
 pelaajat_yv_25_all <-
-  testi2 %>%
+  data2 %>%
   group_by(PELAAJA) %>%
   summarise(
     PELAAJA = first(PELAAJA),
     aloitus = min(aloitusvuosi),
     viimeinen = max(viimeinenvuosi),
-    ura =  paste0(aloitus, "–", ifelse(viimeinen == max(testi2$viimeinenvuosi), yes = "", no = viimeinen)),
+    ura =  paste0(aloitus, "–", ifelse(viimeinen == max(data2$viimeinenvuosi), yes = "", no = viimeinen)),
     O = sum(O), 
     L = sum(L),
     M = sum(M),
@@ -113,14 +119,9 @@ pelaajat_yv_25$eb_raw_luokka <- factor(pelaajat_yv_25$eb_raw_luokka, levels = c(
 #
 pelaajat_yv_25 <- pelaajat_yv_25 %>% unite("yhd_luokka_eb",eb_raw_luokka, `L/O_luokka`, sep = " -- ", remove = FALSE)
 #
-#pelaajat_yv_25 %>% ggplot(aes(x=`L/O`, y=raw)) +
-#  geom_point(aes(color=raw_luokka)) 
-#  facet_wrap(~raw_luokka)
-#
 pelaajat_yv_25 %>% count(`L/O_luokka`,raw_luokka)
-kok2 <-pelaajat_yv_25 %>% count(`L/O_luokka`,eb_raw_luokka) %>% pivot_wider(names_from = eb_raw_luokka, values_from = n)
+summary_table <-pelaajat_yv_25 %>% count(`L/O_luokka`,eb_raw_luokka) %>% pivot_wider(names_from = eb_raw_luokka, values_from = n)
 #
-#kom_pelaajat <- pelaajat_yv_25 %>% filter(raw_luokka =="Erittäin korkea maaliodottama")
 #
 xxx_pelaajat <- pelaajat_yv_25 %>% filter(eb_raw_luokka=="Low,%", `L/O_luokka` %in% c("Very High,spg", "High,spg")) %>% arrange(desc(L)) %>% head(5)
 xxx_pelaajat2 <- pelaajat_yv_25 %>% filter(eb_raw_luokka=="High,%", `L/O_luokka` %in% c("Low,spg"))  %>% arrange(desc(L)) %>% head(5)
@@ -128,7 +129,6 @@ xxx_pelaajat3 <- pelaajat_yv_25 %>% filter(eb_raw_luokka=="Very High,%", `L/O_lu
 #
 top_10_eb <- pelaajat_yv_25 %>% arrange(desc(eb_raw)) %>% head(10)
 top_10_raw <- pelaajat_yv_25 %>% arrange(desc(raw)) %>% head(10)
-#estBetaParams(mu_, var_)
 
 #pelaajat_yv_25 %>% ggplot(aes(x= `L/O`, eb_raw)) +
 #  geom_point() +
@@ -170,12 +170,18 @@ pelaajat_yv_25 %>% ggplot(aes(x= raw, eb_raw)) +
 
 
 #
-top_10_eb <-top_10_eb %>%  mutate("Rank" = rank(desc(eb_raw)))
+summary_top_10_eb <-top_10_eb %>%  mutate("Rank" = rank(desc(eb_raw))) %>% select(PELAAJA,JOUKKUE,O,L,M,`M/O`,`L/O`,raw,eb_raw,Rank) %>% rename("Adjusted" = eb_raw)
+summary_top_10_raw <-top_10_raw %>%  mutate("Rank" = rank(desc(raw))) %>% select(PELAAJA,JOUKKUE,O,L,M,`M/O`,`L/O`,raw,eb_raw,Rank) %>% rename("Adjusted" = eb_raw)
 #
-ggplot(top_10_eb, aes(x = eb_raw, y = reorder(PELAAJA, -Rank))) +
+#Let us write Toptens and summary to folder named data
+write_csv(summary_table, file = "data/summarytable.csv")
+write_csv(summary_top_10_eb, file = "data/summary_top_10_eb.csv")
+write_csv(summary_top_10_raw, file = "data/summary_top_10_raw.csv")
+#
+plot_top_10_eb <- ggplot(summary_top_10_eb, aes(x = Adjusted, y = reorder(PELAAJA, -Rank))) +
   geom_point(size = 3) +  
   geom_point(aes(x = raw, y = reorder(PELAAJA, -Rank)),shape = 5) + 
-  geom_segment(aes(x = 0.00, xend = eb_raw, 
+  geom_segment(aes(x = 0.00, xend = Adjusted, 
                    y = reorder(PELAAJA, -Rank), 
                    yend = reorder(PELAAJA, -Rank)), 
                color = "black", size = 0.3) + 
@@ -200,12 +206,10 @@ ggplot(top_10_eb, aes(x = eb_raw, y = reorder(PELAAJA, -Rank))) +
     plot.caption = element_text(size = 9, hjust = 1)
   )
 #
-top_10_raw <-top_10_raw %>%  mutate("Rank" = rank(desc(raw)))
-#
-ggplot(top_10_raw, aes(x = eb_raw, y = reorder(PELAAJA, -Rank))) +
+plot_top_10_raw <- ggplot(summary_top_10_raw, aes(x = Adjusted, y = reorder(PELAAJA, -Rank))) +
   geom_point(size = 3) +  # Plot the points
   geom_point(aes(x = raw, y = reorder(PELAAJA, -Rank)),shape = 5) + 
-  geom_segment(aes(x = 0.00, xend = eb_raw, 
+  geom_segment(aes(x = 0.00, xend = Adjusted, 
                    y = reorder(PELAAJA, -Rank), 
                    yend = reorder(PELAAJA, -Rank)), 
                color = "black", size = 0.3) +  
@@ -230,37 +234,27 @@ ggplot(top_10_raw, aes(x = eb_raw, y = reorder(PELAAJA, -Rank))) +
     plot.caption = element_text(size = 9, hjust = 1)
   )
 
-simulate_total_goals <- function(shots_per_game, alpha, beta, num_simulations = 1000) {
-  
-  replicate(num_simulations, {
-    total_goals <- sum(sapply(shots_per_game, function(n) {
-      theta <- rbeta(1, alpha, beta)  
-      rbinom(1, size = n, prob = theta)  
-    }))
-    total_goals
-  })
-}
+#Now we can save plots
+ggsave("images/topten_eb.jpg", plot = plot_top_10_eb, width = 8, height = 8, dpi = 300)
+ggsave("images/topten_raw.jpg", plot = plot_top_10_raw, width = 8, height = 8, dpi = 300)
+
+
+
+#simulate_total_goals <- function(shots_per_game, alpha, beta, num_simulations = 1000) {
+#  
+#  replicate(num_simulations, {
+#    total_goals <- sum(sapply(shots_per_game, function(n) {
+#      theta <- rbeta(1, alpha, beta)  
+#      rbinom(1, size = n, prob = theta)  
+#    }))
+#    total_goals
+#  })
+#}
 #
 games_left$JOUKKUE <- str_replace(games_left$JOUKKUE, "Nokian KrP", "KrP")
 games_left$JOUKKUE <- str_replace(games_left$JOUKKUE, "FBC Turku", "FBC")
 games_left$JOUKKUE <- str_replace(games_left$JOUKKUE, "EräViikingit", "ErVi")
 pelaajat_yv_25 <- left_join(pelaajat_yv_25, games_left %>% select(JOUKKUE,`Games Left`))
-#tulevat_ottelut <- data.frame(JOUKKUE = c("Classic", "Oilers", "KrP", "SPV","Indians", "TPS", "Happee", "FBC", "Jymy", "ErVi", "OLS", "LASB"),
-#                              ottelut = c(14,15,17,15,15,15,15,16,14,16,14,16) )
-
-#
-#apulista <- raw %>% filter(kausi=="2024-2025") %>% select(PELAAJA, JOUKKUE)  
-#
-#apulista <- left_join(apulista, tulevat_ottelut)
-#pelaajat_yv_25 <- left_join(pelaajat_yv_25, apulista)
-
-#df <- data.frame(
-#  Player = c("Player 1", "Player 2", "Player 3"), # Player names
-#  Alpha_Post = c(5, 3, 7),  # Posterior alpha (success rate)
-#  Beta_Post = c(15, 20, 10),  # Posterior beta (failure rate)
-#  Shots_Per_Game = c(8, 12, 10),  # Average shots per game
-#  Num_Games = c(10, 10, 10)  # Number of games to simulate (next 10 games)
-#)
 #
 simulate_player_goals <- function(alpha, beta, shots_per_game, num_games, num_simulations = 1000) {
   replicate(num_simulations, {
@@ -301,7 +295,6 @@ top_10_final_goals <- top_10_final_goals %>% arrange(desc(Simulated_Goals)) %>% 
 
 #
 ggplot(top_10_final_goals, aes(x = PELAAJA)) +
-  # Add credibility intervals as horizontal segments
   geom_segment(aes(
     x = PELAAJA,
     xend = PELAAJA,
