@@ -1,0 +1,60 @@
+---
+title: "Bayes Meets Floorball: How to Evaluate Shooting Percentages?"
+description: |
+  Using prior distribution to scale observed shooting percentages.
+author:
+  - name: Olli Haapasalo
+date: "`r Sys.Date()`"
+output:
+  distill::distill_article:
+    self_contained: false
+    toc: true
+    toc_depth: 3
+repository_url: "https://github.com/ollhaa/BayesMeetsFloorball"
+categories:
+  - Floorball
+  - Data Analysis
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE, 
+  message = FALSE, 
+  warning = FALSE, 
+  dpi = 500, 
+  fig.width=8, 
+  fig.height=8,
+  tidy = 'styler'
+  )
+
+library(tidyverse)
+library(rvest)
+#library(gt)
+#library(patchwork)
+
+```
+
+
+
+# Background
+
+## Observed Shooting Percentages
+
+## Bayesian Perspective
+
+
+# Adjusted Shooting Percentages
+
+## Top 10: Adjusted Percentagae
+
+## Top 10: Raw Percentages with Adjustment
+
+## Some Excerpts From the Data
+
+
+# Predictions
+
+## Method
+
+## Top 10: Top Scorers After Season
