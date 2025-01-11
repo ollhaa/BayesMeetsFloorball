@@ -1,7 +1,7 @@
 ---
 title: "Bayes Meets Floorball: How to Evaluate Shooting Percentages?"
 description: |
-  Using prior distribution to scale observed shooting percentages.
+    Using prior distribution to scale observed shooting percentages.
 author:
   - name: Olli Haapasalo
 date: "`r Sys.Date()`"
@@ -9,13 +9,12 @@ output:
   distill::distill_article:
     self_contained: false
     toc: true
-    toc_depth: 3
+    toc_depth: 4
 repository_url: "https://github.com/ollhaa/BayesMeetsFloorball"
 categories:
   - Floorball
   - Data Analysis
 ---
-
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(
@@ -30,31 +29,308 @@ knitr::opts_chunk$set(
 
 library(tidyverse)
 library(rvest)
+library(knitr)
+library(scales)
 #library(gt)
 #library(patchwork)
 
 ```
 
-
+*Idea of post post is from two blog post. Data is from F-liiga* 
 
 # Background
 
+After Finland's World Cup, interest in domestic leagues had not diminished at all. The majority of the Finnish national team's star players, such as Justus Kainulainen, Aaro Astala, Joona Rantala and Otto Lehkosuo play in the F-League. The public's interest is often used for points and goals so in this article I will discuss goal scoring in a slightly nerdy way.
+
+As of January 6, 2025, a little more than half of the season has been played in the F-League and the situation regarding the top scorers is as follows:
+
+```{r, echo=FALSE}
+players_2425_summary <- read_csv("../data/players_2425_summary.csv")
+top_scorers <- players_2425_summary %>% select(PELAAJA,JOUKKUE,O,L,M,`M/O`,raw) %>% arrange(desc(M)) %>% head(10)
+new_names <- c("PLAYER", "TEAM", "Games", "Shots","Goals", "GPG", "Shooting%")
+colnames(top_scorers) <- new_names
+top_scorers$GPG <- round(top_scorers$GPG,2)
+top_scorers$`Shooting%` <- round(top_scorers$`Shooting%`*100,2)
+leader <- top_scorers %>% select(PLAYER) %>% head(1) %>% pull
+goals <- top_scorers %>% select(Goals) %>% head(1) %>% pull(1)
+
+kable(top_scorers, caption = "Top-10 Scorers in F-liiga 6.1.2025")
+```
+
+The goal exchange is led by `r leader` by `r goals` goals. In addition to the names and the number of goals, attention may be drawn to the key figures GPG which describes the number of goals per game and Shooting%. Shooting percentage means how many goals a player has scored with his number of shots. It is noted that the number of goals in a game can be composed of the number of shots and the shooting percentage:
+
+$$ GPG =  SPG * Shooting\%$$ With can be written in more simplified form:
+
+$$ {Goals \over{Games}} =  {Shots \over {Games}} * {Goals \over {Shots}} $$ One way to model scoring is applied above by Binomial distribution. Binomial distribution is probability distribution which describes of the number of successes in a sequence of n independent experiments. There are two parameters in the model, $n$ and $p$. In here we can make assumption that n is shoots per game (SPG) and p is the shooting percentage (Shooting%). Index $i ∈ 1,2,...k$ where k is number of players.
+
+$$Goals\ of\ player_i\ in\ the\ game = Binomial(SPG_i, Shooting_i\%)$$
+
+Shooting percentage tells you how effectively a player takes advantage of scoring opportunities. For example, if a player has only four shots and has scored twice, their shooting percentage is 50.0% (or 0.50 as a decimal). However, it is difficult to answer how effectively a player shoots with four shots as more games accumulate, when randomness affects scoring. A player whose shooting percentage is the same 50.0% after a thousand shots is, in some sense, more credible.
+
 ## Observed Shooting Percentages
 
-## Bayesian Perspective
+```{r, echo=FALSE}
+summary_top_10_raw <- read.csv("../data/summary_top_10_raw.csv")
+summary_top_10_raw <- summary_top_10_raw %>% select(PELAAJA,JOUKKUE,O,L,M,M.O,raw) %>% arrange(desc(raw)) %>% head(10)
+new_names <- c("PLAYER", "TEAM", "Games", "Shots","Goals", "GPG", "Shooting%")
+colnames(summary_top_10_raw) <- new_names
+summary_top_10_raw$GPG <- round(summary_top_10_raw$GPG,2)
+summary_top_10_raw$`Shooting%` <- round(summary_top_10_raw$`Shooting%`*100,2)
 
+leader_raw <- summary_top_10_raw %>% select(PLAYER) %>% head(1) %>% pull()
+raw <- summary_top_10_raw %>% select(`Shooting%`) %>% head(1) %>% pull()
+
+kable(summary_top_10_raw, caption = "The Highest Shooting Percetages")
+```
+
+The highest shooting percentage in the F-League at the time of writing is `r leader_raw` who has `r raw`%. Impressive percentages on the list, but how should we react to this when we notice that there are often quite a few shots? Next, let's briefly look at the basis of Bayesian statistics, Bayes' formula.
+
+## Bayesian Way
+
+Bayesian statistics is the second major paradigm in statistics, with a history that dates back to the 18th century. The Bayesian approach has been controversial because it makes reasoning subjective. Two people with very different preconceptions about something can disagree even after the evidence has been found. However, in recent decades, the Bayesian approach has become more popular as the computational power of computers has increased. The approach is particularly effective when there is little evidence but a broad preconception about something.
+
+The Bayesian approach thus means combining prior knowledge with observations. Prior knowledge can be based on previous research or just one's own preconceptions about the matter. Formally, Bayes' theorem can be stated as follows:
+
+$$P(\theta|data)= {P(data|\theta)P(\theta) \over P(data)}$$ Where:\
+
+$P(\theta|data)$ Is posterior probability which means the distribution of the parameter after taking into account the observed data.\
+$P(data|\theta)$ Is the likelihood, measures how well a statistical model explains observations.\
+$P(\theta)$ Is prior distribution what means the distribution of the parameter before any data is observed.\
+$P(data)$ Is "evidence". The marginal likelihood is the distribution of the observed data marginalized over the parameter.
+
+Some simplified examples can be found from [here](https://www.mathsisfun.com/data/bayes-theorem.html).
 
 # Adjusted Shooting Percentages
 
-## Top 10: Adjusted Percentagae
+```{r, echo=FALSE}
+mean_x <- mean(players_2425_summary %>% filter(L > 15) %>% pull(raw))
+var_x <- var(players_2425_summary %>% filter(L > 15) %>% pull(raw))
+
+# Estimate Beta parameters using Method of Moments
+alpha <- mean_x * ((mean_x * (1 - mean_x) / var_x) - 1)
+beta <- (1 - mean_x) * ((mean_x * (1 - mean_x) / var_x) - 1)
+```
+
+We notice that our situation with shooting percentages is one where we could utilize a Bayesian approach. The greatest challenge and sophistication of the Bayesian approach is to combine prior information with observations. Often analytical solutions are not available so it is necessary to estimate posterior probabilities using simulation. This is one reason why the widespread use of computers has influenced the popularity of Bayesian methods.
+
+The first question is what kind of shooting percentages we could use as a priori probability. We utilize Empirical Bayes estimate the prior distribution from the data itself. We look at the current F-league players who have accumulated at least 15 shots in total, we get some kind of estimate. Before the season, we could use the data from the previous season to our advantage. We notice that the mean of data is `r round(mean_x,2)` , but there are lower and higher values in the distribution. One alternative to the prior distribution is the Beta distribution which offers a flexible alternative for modeling with appropriate parameter choices.
+
+$$Shooting\% = Beta(\alpha, \beta)$$
+
+The method of moments or the maximum likelihood method can be used to obtain estimates for the parameters $\alpha$ and $\beta$ from the prior data (this is called Emprical Bayes which means that prior estimates is also comes from data.). It is worth noting that my choice of prior distribution could also have been something else - this is what subjectivity means! We know that Beta-distribution have the following attributes:
+
+
+
+$${E(Shooting\%) = } { \alpha \over{\alpha+ \beta}}$$
+
+and
+
+$$ {Var(Shooting\%) = } {\alpha\beta \over{(\alpha + \beta)^2(\alpha+\beta+1)}}$$ 
+
+By using Method of Moments we get estimates for $\alpha$ is `r round(alpha,2)` and for $\beta$ is `r round(beta,2)`. We can also check that equation above holds:  `r round(alpha/(alpha+beta),2)` $= \alpha/(\alpha+\beta)$ . Another advantage of choosing the beta distribution as the prior is that we can avoid difficult calculations and simulation at this point. Let us next consider two imaginary players with the same observed shooting percentage, but different numbers of shots. The posterior mean for shooting percentage is
+
+$$ {Adjusted\ Shooting\%\ of\ player_i = } { \alpha + Goals_i\  \over { \alpha + Shots_i + \beta }}$$
+
+If Player 1 has taken 100 shots in a season, of which 20 have been on target, then his shooting percentage is  0.2, or 20%, based on observations, but corrected with the prior information `r round((alpha+20)/(alpha+beta+100),2)` or  `r round((alpha+20)/(alpha+beta+100)*100,2)`%. Correspondingly, Player 2, who has only taken 10 shots and scored twice, has the same observed shooting percentage, but corrected `r round((alpha+2)/(alpha+beta+10),2)` or `r round((alpha+2)/(alpha+beta+10)*100,2)`%! It is worth noting that the corrected estimate approaches the estimates based on the player's observations as the number of observations increases. In summary, it can be said that the player's corrected estimate for shooting percentage scales in a way that higher-than-average observed values are still higher as a priori estimates and vice versa. The evidence, i.e. the number of shots affects how strongly this happens.
+
+```{r, echo=FALSE}
+players_2425_summary  %>%
+  filter(L > 15) %>%
+  ggplot() +
+  geom_histogram(aes(raw, y = ..density..), binwidth = 0.01) +
+  stat_function(fun = function(x) dbeta(x, alpha, beta), color = "black",
+                size = 1) +
+  scale_x_continuous(labels = percent) +
+  xlab("Raw Shooting Percentage") +
+  theme_minimal()
+```
+
+In the image above, the gray histogram of the shooting percentages (with binwidth = 0.01) and the black curve is the Beta distribution with parameters $\alpha =$ `r round(alpha,2)` and $\beta =$ `r round(beta,2)` estimated from the data. 
+
+## Top 10: Adjusted Percentage
+
+Next, let's look at what the adjusted shooting% looks like for the best players:
+
+```{r, echo = FALSE}
+summary_top_10_eb <- read_csv("../data/summary_top_10_eb.csv")
+#
+ggplot(summary_top_10_eb, aes(x = Adjusted, y = reorder(PELAAJA, -Rank))) +
+  geom_point(size = 3) +  
+  geom_point(aes(x = raw, y = reorder(PELAAJA, -Rank)),shape = 5) + 
+  geom_segment(aes(x = 0.00, xend = Adjusted, 
+                   y = reorder(PELAAJA, -Rank), 
+                   yend = reorder(PELAAJA, -Rank)), 
+               color = "black", size = 0.3) + 
+  geom_segment(aes(x = 0.00, xend = raw, 
+                   y = reorder(PELAAJA, -Rank), 
+                   yend = reorder(PELAAJA, -Rank)), 
+               color = "black", size = 0.3,linetype = "dotted") +  
+  scale_x_continuous(breaks = seq(0,0.35, 0.05), labels = percent) +
+  labs(
+    title = "Top-10 Adjusted Shooting Percentage in F-liiga 2024-2025",
+    #subtitle = "Dotted lines are raw percentages",
+    x = "Adjusted Shooting Percentage",
+    y = NULL
+  ) +
+  theme_minimal() +
+  theme(
+    panel.grid.major.y = element_blank(),  
+    axis.text.y = element_text(size = 12), 
+    axis.text.x = element_text(size = 10),
+    plot.title = element_text(size = 14, face = "bold"),
+    plot.subtitle = element_text(size = 14),
+    plot.caption = element_text(size = 9, hjust = 1)
+  )
+```
+
+```{r, echo = FALSE}
+eb1 <- players_2425_summary %>% arrange(desc(eb_raw)) %>% head(1) %>% select(PELAAJA) %>% pull()
+eb1_raw <- round(players_2425_summary %>% arrange(desc(eb_raw)) %>% head(1) %>% select(raw) %>% pull(),2)
+eb1_adjusted <- round(players_2425_summary %>% arrange(desc(eb_raw)) %>% head(1) %>% select(raw) %>% pull(),2)
+
+```
+
+
+The first on the list is `r eb1`, whose uncorrected (gray) shooting percentage is `r eb1_raw` and corrected (black) `r eb1_adjusted`. We notice that for some of the players on the list there is some difference between the corrected and uncorrected.
 
 ## Top 10: Raw Percentages with Adjustment
 
+Next, let us see how the top 10 adjusted shooting percentages change from uncorrected shooting percentages:
+
+```{r, echo = FALSE}
+summary_top_10_raw <- read_csv("../data/summary_top_10_raw.csv")
+#
+ggplot(summary_top_10_raw, aes(x = Adjusted, y = reorder(PELAAJA, -Rank))) +
+  geom_point(size = 3) +  # Plot the points
+  geom_point(aes(x = raw, y = reorder(PELAAJA, -Rank)),shape = 5) + 
+  geom_segment(aes(x = 0.00, xend = Adjusted, 
+                   y = reorder(PELAAJA, -Rank), 
+                   yend = reorder(PELAAJA, -Rank)), 
+               color = "black", size = 0.3) +  
+  geom_segment(aes(x = 0.00, xend = raw, 
+                   y = reorder(PELAAJA, -Rank), 
+                   yend = reorder(PELAAJA, -Rank)), 
+               color = "black", size = 0.3,linetype = "dotted") +  
+  scale_x_continuous(breaks = seq(0,1, 0.1), labels = percent) +
+  labs(
+    title = "Top-10 Raw Shooting Percentage in F-liiga 2024-2025",
+    #subtitle = "Black lines are adjusted percentages",
+    x = "Shooting Percentage",
+    y = NULL
+  ) +
+  theme_minimal() +
+  theme(
+    panel.grid.major.y = element_blank(),  
+    axis.text.y = element_text(size = 12), 
+    axis.text.x = element_text(size = 10),
+    plot.title = element_text(size = 14, face = "bold"),
+    plot.subtitle = element_text(size = 14),
+    plot.caption = element_text(size = 9, hjust = 1)
+  )
+```
+
+```{r, echo = FALSE}
+raw1 <- players_2425_summary %>% arrange(desc(raw)) %>% head(1) %>% select(PELAAJA) %>% pull()
+raw1_raw <- round(players_2425_summary %>% arrange(desc(raw)) %>% head(1) %>% select(raw) %>% pull(),2)
+raw1_adjusted <- round(players_2425_summary %>% arrange(desc(raw)) %>% head(1) %>% select(raw) %>% pull(),2)
+```
+
+The first on the list is of course still (see Table 2) `r raw1`, whose uncorrected (gray) shooting percentage is `r raw1` and corrected (black) `r raw1_adjusted`. We notice that for some of the players on the list the difference between corrected and uncorrected is really big. More supporting material, i.e. shots, is needed for them!
+
 ## Some Excerpts From the Data
 
+```{r, echo = FALSE}
+eb_limit_09 <- quantile(players_2425_summary %>% pull(eb_raw),0.9, na.rm=T)
+eb_limit_07 <- quantile(players_2425_summary %>% pull(eb_raw),0.7, na.rm=T)
+eb_limit_05 <- quantile(players_2425_summary %>% pull(eb_raw),0.5, na.rm=T)
+eb_limit_03 <- quantile(players_2425_summary %>% pull(eb_raw),0.3, na.rm=T)
+#
+lo_limit_09 <- quantile(players_2425_summary %>% pull(`L/O`),0.9, na.rm=T)
+lo_limit_07 <- quantile(players_2425_summary %>% pull(`L/O`),0.7, na.rm=T)
+lo_limit_05 <- quantile(players_2425_summary %>% pull(`L/O`),0.5, na.rm=T)
+lo_limit_03 <- quantile(players_2425_summary %>% pull(`L/O`),0.3, na.rm=T)
+#
+rounded_limit_lo_limit_09 <- round(lo_limit_09,2)
+
+```
+
+In this section I will make some extractions from the data. I will create five different segments for both the number of shots and the corrected shooting percentage, i.e. a total of 5*5 = 25 segments. The limits are based on a quantile function, which is also known as the inverse function of the cumulative function, and tells the limit below which the proportion in question falls. The limits are 0.3, 0.5, 0.7 and 0.9. For example, for a number of shots per match of 0.9, the limit is `r rounded_limit_lo_limit_09`, i.e. 90% of the players have a number of shots per match lower than this.
+
+```{r, echo = FALSE}
+
+
+ players_2425_summary %>% ggplot(aes(x= `L/O`, eb_raw)) +
+  geom_rect(aes(xmin=lo_limit_09, xmax = Inf, ymin=eb_limit_09, ymax =Inf), fill="lightgreen") +
+  geom_rect(aes(xmin=lo_limit_09, xmax = Inf, ymin=0, ymax =eb_limit_03), fill="red") +
+  geom_point() +
+  geom_vline(xintercept=lo_limit_03) +
+  geom_vline(xintercept=lo_limit_05) +
+  geom_vline(xintercept=lo_limit_07) +
+  geom_vline(xintercept=lo_limit_09) +
+  geom_hline(yintercept=eb_limit_03) +
+  geom_hline(yintercept=eb_limit_05) +
+  geom_hline(yintercept=eb_limit_07) +
+  geom_hline(yintercept=eb_limit_09) +
+  scale_x_continuous(breaks = seq(0,12,1)) +
+  scale_y_continuous(labels = percent) + 
+  labs(title = "Adjusted Shooting Percentage vs. Shoots Per Game", x= "Shoots Per Game", y="Adjusted") +
+  theme_minimal()
+```
+
+I've highlighted two different groups in the image above. On the top right (light green) are players who have both an adjusted shooting percentage and shots per game in the top 10%. On the bottom right (red) are players who have a shot per game in the top 10% but an adjusted shooting percentage in the bottom 30%.
+
+```{r, echo = FALSE}
+players_veryhigh_eb_veryhigh_spg <- read_csv("../data/players_veryhigh_eb_veryhigh_spg.csv")
+players_veryhigh_eb_veryhigh_spg <- players_veryhigh_eb_veryhigh_spg %>% select(PELAAJA,JOUKKUE,O,L,M,`M/O`,Adjusted)
+players_veryhigh_eb_veryhigh_spg$`M/O` <- round(players_veryhigh_eb_veryhigh_spg$`M/O`,2)
+players_veryhigh_eb_veryhigh_spg$Adjusted <- round(players_veryhigh_eb_veryhigh_spg$Adjusted*100,2)
+new_names2 <- c("PLAYER", "TEAM", "Games", "Shots","Goals", "GPG", "Adjusted%")
+colnames(players_veryhigh_eb_veryhigh_spg) <- new_names2
+
+
+kable(players_veryhigh_eb_veryhigh_spg, caption = "F-liiga 2024-25: Adjusted Shooting Percentage and Shots Per Game in the Highest Class")
+```
+
+Listalla on tuttuja tähtipelaajia, joiden laukaisuosaminen tunnetaan. 
 
 # Predictions
 
+aaa
+
 ## Method
 
+aaa
+
 ## Top 10: Top Scorers After Season
+
+aaaa
+
+```{r, echo = FALSE}
+top_10_final_goals <- read.csv("../data/summary_top_10_final_goals.csv")
+#
+ggplot(top_10_final_goals, aes(x = reorder(PELAAJA, Final_Goals))) +
+  geom_segment(aes(
+    x = PELAAJA,
+    xend = PELAAJA,
+    y = 0,
+    yend = M
+  ), color = "black", size = 1,arrow = arrow(length = unit(0.2, "cm"))) +
+  geom_segment(aes(
+    x = PELAAJA,
+    xend = PELAAJA,
+    y = Final_CI_Lower,
+    yend = Final_CI_Upper
+  ), color = "gray", size = 1) +
+  geom_point(aes(y = Final_Goals), color = "black", size = 2,shape=5) +
+  scale_y_continuous(breaks = seq(0, 50, 5)) +
+  labs(
+    title = "F-liiga Prediction: Top-10 Goal Scorers End of Season 2024-2025",
+    x = "Player",
+    y = "Predicted Goals") +
+  theme_minimal() +
+  coord_flip()
+```
+
+# Discussion
+
+aaa

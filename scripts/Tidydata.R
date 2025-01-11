@@ -3,9 +3,15 @@ source("scripts/Webscraping.R")
 library(tidyverse)
 library(scales)
 #
-data <- get_data(4)
-games_left <- get_rest_games()
+#data <- get_data(4)
+#games_left <- get_rest_games()
+#
 
+#
+#write_csv(data, file = "data/raw.csv")
+#write_csv(games_left, file = "data/games_left.csv")
+data <- read_csv("data/raw.csv")
+games_left <- read_csv("data/games_left.csv")
 #
 data$O <- as.numeric(data$O)
 data$M <- as.numeric(data$M)
@@ -62,6 +68,8 @@ pelaajat_yv_25_all <-
   )
 
 pelaajat_yv_25 <- pelaajat_yv %>% filter(viimeinen==2025, L >0)
+pelaajat_yv_25 <- pelaajat_yv_25 %>% select(-aloitus,-ura)
+#
 #
 raw_limit_09 <- quantile(pelaajat_yv_25 %>% pull(raw),0.9, na.rm=T)
 raw_limit_07 <- quantile(pelaajat_yv_25 %>% pull(raw),0.7, na.rm=T)
@@ -92,14 +100,26 @@ pelaajat_yv_25$raw_luokka <- factor(pelaajat_yv_25$raw_luokka, levels = c("Low,%
 #
 pelaajat_yv_25$`L/O_luokka` <- factor(pelaajat_yv_25$`L/O_luokka`, levels = c("Low,spg","Average Low,spg","Average High,spg", "High,spg", "Very High,spg"))
 #
-#Let us calculate means etc only for player with more than 10 shots. this is based on last 4 + ongoing season
-mean_x <- mean(pelaajat_yv_25_all %>% filter(L > 10) %>% pull(raw))
-median_x <- median(pelaajat_yv_25_all %>% filter(L > 10) %>% pull(raw))
-var_x <- var(pelaajat_yv_25_all %>% filter(L > 10) %>% pull(raw))
+
+#Let us calculate means etc only for player with more than 10 shots. this is based on this season
+mean_x <- mean(pelaajat_yv_25 %>% filter(L > 10) %>% pull(raw))
+#median_x <- median(pelaajat_yv_25_all %>% filter(L > 10) %>% pull(raw))
+var_x <- var(pelaajat_yv_25 %>% filter(L > 10) %>% pull(raw))
 
 # Estimate Beta parameters using Method of Moments
 alpha <- mean_x * ((mean_x * (1 - mean_x) / var_x) - 1)
 beta <- (1 - mean_x) * ((mean_x * (1 - mean_x) / var_x) - 1)
+#
+plot_rawhist_vs_beta <- pelaajat_yv_25 %>%
+  filter(L > 15) %>%
+  ggplot() +
+  geom_histogram(aes(raw, y = ..density..), binwidth = 0.01) +
+  stat_function(fun = function(x) dbeta(x, alpha, beta), color = "black",
+                size = 1) +
+  xlab("Raw Shooting Percentage") +
+  theme_minimal()
+#
+#ggsave("images/rawhist_vs_beta.jpg", plot = plot_rawhist_vs_beta, width = 8, height = 8, dpi = 300)
 #
 pelaajat_yv_25 <- pelaajat_yv_25 %>%
   mutate(eb_raw = (M + alpha) / (L + alpha + beta), alhpa_new = M+ alpha, beta_new = L + alpha + beta)
@@ -119,71 +139,58 @@ pelaajat_yv_25$eb_raw_luokka <- factor(pelaajat_yv_25$eb_raw_luokka, levels = c(
 #
 pelaajat_yv_25 <- pelaajat_yv_25 %>% unite("yhd_luokka_eb",eb_raw_luokka, `L/O_luokka`, sep = " -- ", remove = FALSE)
 #
+
+#
 pelaajat_yv_25 %>% count(`L/O_luokka`,raw_luokka)
 summary_table <-pelaajat_yv_25 %>% count(`L/O_luokka`,eb_raw_luokka) %>% pivot_wider(names_from = eb_raw_luokka, values_from = n)
 #
 #
-xxx_pelaajat <- pelaajat_yv_25 %>% filter(eb_raw_luokka=="Low,%", `L/O_luokka` %in% c("Very High,spg", "High,spg")) %>% arrange(desc(L)) %>% head(5) %>%
+xxx_pelaajat <- pelaajat_yv_25 %>% filter(eb_raw_luokka=="Low,%", `L/O_luokka` %in% c("Very High,spg")) %>% arrange(desc(L)) %>% head(5) %>%
   select(PELAAJA,JOUKKUE,O,L,M,`M/O`,`L/O`,raw,eb_raw,yhd_luokka_eb) %>% rename("Adjusted" = eb_raw)
-xxx_pelaajat2 <- pelaajat_yv_25 %>% filter(eb_raw_luokka=="High,%", `L/O_luokka` %in% c("Low,spg"))  %>% arrange(desc(L)) %>% head(5) %>%
+xxx_pelaajat2 <- pelaajat_yv_25 %>% filter(eb_raw_luokka=="Very High,%", `L/O_luokka` %in% c("Low,spg"))  %>% arrange(desc(L)) %>% head(5) %>%
   select(PELAAJA,JOUKKUE,O,L,M,`M/O`,`L/O`,raw,eb_raw,yhd_luokka_eb) %>% rename("Adjusted" = eb_raw)
 xxx_pelaajat3 <- pelaajat_yv_25 %>% filter(eb_raw_luokka=="Very High,%", `L/O_luokka` == "Very High,spg")  %>% arrange(desc(L)) %>% head(5) %>%
   select(PELAAJA,JOUKKUE,O,L,M,`M/O`,`L/O`,raw,eb_raw,yhd_luokka_eb) %>% rename("Adjusted" = eb_raw)
 #
-write_csv(xxx_pelaajat, file = "data/players_low_eb_high_spg.csv")
-write_csv(xxx_pelaajat, file = "data/players_high_eb_low_spg.csv")
-write_csv(xxx_pelaajat, file = "data/players_veryhigh_eb_high_spg.csv")
+#write_csv(xxx_pelaajat, file = "data/players_low_eb_veryhigh_spg.csv")
+#write_csv(xxx_pelaajat2, file = "data/players_veryhigh_eb_low_spg.csv")
+#write_csv(xxx_pelaajat3, file = "data/players_veryhigh_eb_veryhigh_spg.csv")
 #
 top_10_eb <- pelaajat_yv_25 %>% arrange(desc(eb_raw)) %>% head(10)
 top_10_raw <- pelaajat_yv_25 %>% arrange(desc(raw)) %>% head(10)
 
+plot_segments <- pelaajat_yv_25 %>% ggplot(aes(x= `L/O`, eb_raw)) +
+  geom_rect(aes(xmin=lo_limit_09, xmax = Inf, ymin=eb_limit_09, ymax =Inf), fill="lightgreen") +
+  geom_rect(aes(xmin=lo_limit_09, xmax = Inf, ymin=0, ymax =eb_limit_03), fill="red") +
+  geom_point() +
+  geom_vline(xintercept=lo_limit_03) +
+  geom_vline(xintercept=lo_limit_05) +
+  geom_vline(xintercept=lo_limit_07) +
+  geom_vline(xintercept=lo_limit_09) +
+  geom_hline(yintercept=eb_limit_03) +
+  geom_hline(yintercept=eb_limit_05) +
+  geom_hline(yintercept=eb_limit_07) +
+  geom_hline(yintercept=eb_limit_09) +
+  scale_x_continuous(breaks = seq(0,12,1)) +
+  labs(title = "Adjusted Shooting Percentage vs. Shoots Per Game", x= "Shoots Per Game", y="Adjusted") +
+  theme_minimal()
+#
+#ggsave("images/segments.jpg", plot = plot_segments, width = 8, height = 8, dpi = 300)
+#
 #pelaajat_yv_25 %>% ggplot(aes(x= `L/O`, eb_raw)) +
-#  geom_point() +
-#  geom_vline(xintercept=lo_limit_03) +
-#  geom_vline(xintercept=lo_limit_05) +
-#  geom_vline(xintercept=lo_limit_07) +
-#  geom_vline(xintercept=lo_limit_09) +
-#  geom_hline(yintercept=raw_limit_03) +
-#  geom_hline(yintercept=raw_limit_05) +
-#  geom_hline(yintercept=raw_limit_07) +
-#  geom_hline(yintercept=raw_limit_09) 
+#  geom_point()
 #
-pelaajat_yv_25 %>% ggplot(aes(x= `L/O`, eb_raw)) +
-  geom_point()
-#
-pelaajat_yv_25 %>% ggplot(aes(x= raw, eb_raw)) +
-  geom_point()
-
-#players %>%
-#  head(n = 10L) %>%
-#  select(player, shots, goals, raw) %>%
-#  mutate(
-#    raw = ifelse(is.na(raw), yes = "", no = sprintf("%.2f%%", raw * 100))
-#  )
-
-#pelaajat_yv_25 %>%
-#  filter(L > 0) %>%
-#  ggplot(aes(raw)) +
-#  geom_density() +
-#  scale_x_continuous(labels = percent) +
-#scale_y_continuous(labels = percent, limits = c(0,0.3)) +
-#  labs(
-#    subtitle = "Career shooting percentages per player position",
-#    x = "raw career shooting percentage"
-#  )
-#
-
-
-
+#pelaajat_yv_25 %>% ggplot(aes(x= raw, eb_raw)) +
+#  geom_point()
 
 #
 summary_top_10_eb <-top_10_eb %>%  mutate("Rank" = rank(desc(eb_raw))) %>% select(PELAAJA,JOUKKUE,O,L,M,`M/O`,`L/O`,raw,eb_raw,Rank) %>% rename("Adjusted" = eb_raw)
 summary_top_10_raw <-top_10_raw %>%  mutate("Rank" = rank(desc(raw))) %>% select(PELAAJA,JOUKKUE,O,L,M,`M/O`,`L/O`,raw,eb_raw,Rank) %>% rename("Adjusted" = eb_raw)
 #
 #Let us write Toptens and summary to folder named data
-write_csv(summary_table, file = "data/summarytable.csv")
-write_csv(summary_top_10_eb, file = "data/summary_top_10_eb.csv")
-write_csv(summary_top_10_raw, file = "data/summary_top_10_raw.csv")
+#write_csv(summary_table, file = "data/summarytable.csv")
+#write_csv(summary_top_10_eb, file = "data/summary_top_10_eb.csv")
+#write_csv(summary_top_10_raw, file = "data/summary_top_10_raw.csv")
 #
 plot_top_10_eb <- ggplot(summary_top_10_eb, aes(x = Adjusted, y = reorder(PELAAJA, -Rank))) +
   geom_point(size = 3) +  
@@ -242,21 +249,10 @@ plot_top_10_raw <- ggplot(summary_top_10_raw, aes(x = Adjusted, y = reorder(PELA
   )
 
 #Now we can save plots
-ggsave("images/topten_eb.jpg", plot = plot_top_10_eb, width = 8, height = 8, dpi = 300)
-ggsave("images/topten_raw.jpg", plot = plot_top_10_raw, width = 8, height = 8, dpi = 300)
+#ggsave("images/topten_eb.jpg", plot = plot_top_10_eb, width = 12, height = 8, dpi = 300)
+#ggsave("images/topten_raw.jpg", plot = plot_top_10_raw, width = 12, height = 8, dpi = 300)
 
 
-
-#simulate_total_goals <- function(shots_per_game, alpha, beta, num_simulations = 1000) {
-#  
-#  replicate(num_simulations, {
-#    total_goals <- sum(sapply(shots_per_game, function(n) {
-#      theta <- rbeta(1, alpha, beta)  
-#      rbinom(1, size = n, prob = theta)  
-#    }))
-#    total_goals
-#  })
-#}
 #
 games_left$JOUKKUE <- str_replace(games_left$JOUKKUE, "Nokian KrP", "KrP")
 games_left$JOUKKUE <- str_replace(games_left$JOUKKUE, "FBC Turku", "FBC")
@@ -294,31 +290,31 @@ pelaajat_yv_25$Final_CI_Upper <- pelaajat_yv_25$M+pelaajat_yv_25$CI_Upper
 
 #
 
-
-#
-top_10_final_goals <- pelaajat_yv_25[order(pelaajat_yv_25$Final_Goals), ]
-top_10_final_goals$PELAAJA <- factor(top_10_final_goals$PELAAJA, levels = top_10_final_goals$PELAAJA)
-top_10_final_goals <- top_10_final_goals %>% arrange(desc(Simulated_Goals)) %>% head(10)
-top_10_final_goals <- top_10_final_goals %>% select(PELAAJA,JOUKKUE,O,L,M,`M/O`,`L/O`,raw,eb_raw,alhpa_new,beta_new,`Games Left`,Simulated_Goals,CI_Lower,
+top_10_final_goals <- pelaajat_yv_25 %>% arrange(desc(Final_Goals)) %>% head(10) %>% 
+                                          select(PELAAJA,JOUKKUE,O,L,M,`M/O`,`L/O`,raw,eb_raw,alhpa_new,beta_new,`Games Left`,CI_Lower,
                                                     CI_Upper,Final_Goals,Final_CI_Lower,Final_CI_Upper) %>% rename("Adjusted" = eb_raw)
 
+  #
+#write_csv(top_10_final_goals, file = "data/summary_top_10_final_goals.csv")
 #
-write_csv(top_10_final_goals, file = "data/summary_top_10_final_goals.csv")
+players_2425_summary <- pelaajat_yv_25 %>% select(-Simulated_Goals)
+#write_csv(players_2425_summary, file="data/players_2425_summary.csv")
 #
-plot_top_10_final_goals <- ggplot(top_10_final_goals, aes(x = PELAAJA)) +
+plot_top_10_final_goals <- ggplot(top_10_final_goals, aes(x = reorder(PELAAJA, Final_Goals))) +
   geom_segment(aes(
     x = PELAAJA,
     xend = PELAAJA,
     y = 0,
     yend = M
-  ), color = "black", size = 1) +
+  ), color = "black", size = 1, arrow = arrow(length = unit(0.2, "cm"))) +
   geom_segment(aes(
     x = PELAAJA,
     xend = PELAAJA,
     y = Final_CI_Lower,
     yend = Final_CI_Upper
   ), color = "gray", size = 1) +
-  geom_point(aes(y = Final_Goals), color = "black", size = 2,shape=5) +
+  
+  geom_point(aes(y = Final_Goals), color = "black", size = 2, shape= 5) +
   scale_y_continuous(breaks = seq(0, 50, 5)) +
   labs(
     title = "F-liiga Prediction: Top-10 Goal Scorers End of Season 2024-2025",
@@ -327,4 +323,8 @@ plot_top_10_final_goals <- ggplot(top_10_final_goals, aes(x = PELAAJA)) +
   theme_minimal() +
   coord_flip()
 #
-ggsave("images/topten_final_goals.jpg", plot = plot_top_10_final_goals, width = 8, height = 8, dpi = 300)
+#ggsave("images/topten_final_goals.jpg", plot = plot_top_10_final_goals, width = 8, height = 8, dpi = 300)
+
+
+
+
