@@ -36,13 +36,15 @@ library(scales)
 
 ```
 
-*Idea of post post is from two blog post. Data is from F-liiga* 
+*The idea for this blog came from a desire to combine floorball and data analysis and also learn a little web scraping. The methods are mainly from the* [blog named Variance Explained](http://varianceexplained.org/r/empirical_bayes_baseball/). *I also noticed that the same idea has been used before by* [Ilari Scheinin](https://ilari.scheinin.fi/ranking-nhls-best-shooters/). *My own added value is applying this to floorball, make some explanatory data-analysis and predicting the final goal count.*
+
+*The data is from site* [F-liiga webpage](https://fliiga.com/fi/miehet/) *and it was obtained through web scraping.* 
 
 # Background
 
 After Finland's World Cup, interest in domestic leagues had not diminished at all. The majority of the Finnish national team's star players, such as Justus Kainulainen, Aaro Astala, Joona Rantala and Otto Lehkosuo play in the F-League. The public's interest is often used for points and goals so in this article I will discuss goal scoring in a slightly nerdy way.
 
-As of January 6, 2025, a little more than half of the season has been played in the F-League and the situation regarding the top scorers is as follows:
+As 6.1.2025 a little more than half of the season has been played in the F-League and the situation regarding the top scorers is as follows:
 
 ```{r, echo=FALSE}
 players_2425_summary <- read_csv("../data/players_2425_summary.csv")
@@ -83,7 +85,7 @@ raw <- summary_top_10_raw %>% select(`Shooting%`) %>% head(1) %>% pull()
 kable(summary_top_10_raw, caption = "The Highest Shooting Percetages")
 ```
 
-The highest shooting percentage in the F-League at the time of writing is `r leader_raw` who has `r raw`%. Impressive percentages on the list, but how should we react to this when we notice that there are often quite a few shots? Next, let's briefly look at the basis of Bayesian statistics, Bayes' formula.
+The highest shooting percentage in the F-League at the time of writing is `r leader_raw` who has `r round(raw*100,2)`%. Impressive percentages on the list, but how should we react to this when we notice that there are often quite a few shots? Next, let's briefly look at the basis of Bayesian statistics, Bayes' formula.
 
 ## Bayesian Way
 
@@ -113,7 +115,7 @@ beta <- (1 - mean_x) * ((mean_x * (1 - mean_x) / var_x) - 1)
 
 We notice that our situation with shooting percentages is one where we could utilize a Bayesian approach. The greatest challenge and sophistication of the Bayesian approach is to combine prior information with observations. Often analytical solutions are not available so it is necessary to estimate posterior probabilities using simulation. This is one reason why the widespread use of computers has influenced the popularity of Bayesian methods.
 
-The first question is what kind of shooting percentages we could use as a priori probability. We utilize Empirical Bayes estimate the prior distribution from the data itself. We look at the current F-league players who have accumulated at least 15 shots in total, we get some kind of estimate. Before the season, we could use the data from the previous season to our advantage. We notice that the mean of data is `r round(mean_x,2)` , but there are lower and higher values in the distribution. One alternative to the prior distribution is the Beta distribution which offers a flexible alternative for modeling with appropriate parameter choices.
+The first question is what kind of shooting percentages we could use as a priori probability. We utilize Empirical Bayes estimate the prior distribution from the data itself. We look at the current F-league players who have accumulated at least 15 shots in total, we get some kind of estimate. Before the season, we could use the data from the previous season to our advantage. We notice that the mean of data is `r round(mean_x,3)` i.e. `r round(mean_x*100,1)`%  , but there are lower and higher values in the distribution. One alternative to the prior distribution is the Beta distribution which offers a flexible alternative for modeling with appropriate parameter choices.
 
 $$Shooting\% = Beta(\alpha, \beta)$$
 
@@ -131,7 +133,7 @@ By using Method of Moments we get estimates for $\alpha$ is `r round(alpha,2)` a
 
 $$ {Adjusted\ Shooting\%\ of\ player_i = } { \alpha + Goals_i\  \over { \alpha + Shots_i + \beta }}$$
 
-If Player 1 has taken 100 shots in a season, of which 20 have been on target, then his shooting percentage is  0.2, or 20%, based on observations, but corrected with the prior information `r round((alpha+20)/(alpha+beta+100),2)` or  `r round((alpha+20)/(alpha+beta+100)*100,2)`%. Correspondingly, Player 2, who has only taken 10 shots and scored twice, has the same observed shooting percentage, but corrected `r round((alpha+2)/(alpha+beta+10),2)` or `r round((alpha+2)/(alpha+beta+10)*100,2)`%! It is worth noting that the corrected estimate approaches the estimates based on the player's observations as the number of observations increases. In summary, it can be said that the player's corrected estimate for shooting percentage scales in a way that higher-than-average observed values are still higher as a priori estimates and vice versa. The evidence, i.e. the number of shots affects how strongly this happens.
+If Player 1 has taken 100 shots in a season, of which 20 have been on target, then his shooting percentage is  0.2, or 20%, based on observations, but corrected with the prior information `r round((alpha+20)/(alpha+beta+100),2)` or  `r round((alpha+20)/(alpha+beta+100)*100,0)`%. Correspondingly, Player 2, who has only taken 10 shots and scored twice, has the same observed shooting percentage, but corrected `r round((alpha+2)/(alpha+beta+10),2)` or `r round((alpha+2)/(alpha+beta+10)*100,0)`%! It is worth noting that the corrected estimate approaches the estimates based on the player's observations as the number of observations increases. In summary, it can be said that the player's corrected estimate for shooting percentage scales in a way that higher-than-average observed values are still higher as a priori estimates and vice versa. The evidence, i.e. the number of shots affects how strongly this happens.
 
 ```{r, echo=FALSE}
 players_2425_summary  %>%
@@ -185,13 +187,13 @@ ggplot(summary_top_10_eb, aes(x = Adjusted, y = reorder(PELAAJA, -Rank))) +
 
 ```{r, echo = FALSE}
 eb1 <- players_2425_summary %>% arrange(desc(eb_raw)) %>% head(1) %>% select(PELAAJA) %>% pull()
-eb1_raw <- round(players_2425_summary %>% arrange(desc(eb_raw)) %>% head(1) %>% select(raw) %>% pull(),2)
-eb1_adjusted <- round(players_2425_summary %>% arrange(desc(eb_raw)) %>% head(1) %>% select(raw) %>% pull(),2)
+eb1_raw <- players_2425_summary %>% arrange(desc(eb_raw)) %>% head(1) %>% select(raw) %>% pull()
+eb1_adjusted <- players_2425_summary %>% arrange(desc(eb_raw)) %>% head(1) %>% select(eb_raw) %>% pull()
 
 ```
 
 
-The first on the list is `r eb1`, whose uncorrected (gray) shooting percentage is `r eb1_raw` and corrected (black) `r eb1_adjusted`. We notice that for some of the players on the list there is some difference between the corrected and uncorrected.
+The first on the list is `r eb1`, whose uncorrected (gray) shooting percentage is `r round(eb1_raw*100,3)` and corrected (black) `r round(eb1_adjusted*100,3)`. We notice that for some of the players on the list there is some difference between the corrected and uncorrected.
 
 ## Top 10: Raw Percentages with Adjustment
 
@@ -231,11 +233,11 @@ ggplot(summary_top_10_raw, aes(x = Adjusted, y = reorder(PELAAJA, -Rank))) +
 
 ```{r, echo = FALSE}
 raw1 <- players_2425_summary %>% arrange(desc(raw)) %>% head(1) %>% select(PELAAJA) %>% pull()
-raw1_raw <- round(players_2425_summary %>% arrange(desc(raw)) %>% head(1) %>% select(raw) %>% pull(),2)
-raw1_adjusted <- round(players_2425_summary %>% arrange(desc(raw)) %>% head(1) %>% select(raw) %>% pull(),2)
+raw1_raw <- players_2425_summary %>% arrange(desc(raw)) %>% head(1) %>% select(raw) %>% pull()
+raw1_adjusted <- players_2425_summary %>% arrange(desc(raw)) %>% head(1) %>% select(eb_raw) %>% pull()
 ```
 
-The first on the list is of course still (see Table 2) `r raw1`, whose uncorrected (gray) shooting percentage is `r raw1` and corrected (black) `r raw1_adjusted`. We notice that for some of the players on the list the difference between corrected and uncorrected is really big. More supporting material, i.e. shots, is needed for them!
+The first on the list is of course still (see Table 2) `r raw1`, whose uncorrected (gray) shooting percentage is `r round(raw1_raw*100,2)`% and corrected (black) `r round(raw1_adjusted*100,2)`. We notice that for some of the players on the list the difference between corrected and uncorrected is really big. More supporting material, i.e. shots, is needed for them!
 
 ## Some Excerpts From the Data
 
@@ -291,22 +293,57 @@ colnames(players_veryhigh_eb_veryhigh_spg) <- new_names2
 kable(players_veryhigh_eb_veryhigh_spg, caption = "F-liiga 2024-25: Adjusted Shooting Percentage and Shots Per Game in the Highest Class")
 ```
 
-Listalla on tuttuja tähtipelaajia, joiden laukaisuosaminen tunnetaan. 
+There are well-known goal scorers on the list whose shooting skills are known. But for example, the best player in the world, Justus Kainulainen, does not make it into the top ten. On the other hand, with the number of shots Kainulainen takes it is very difficult to keep the shooting percentage above 11 percent. What is a potential goal spot for one person is not for another. 
 
 # Predictions
 
-aaa
+Can we then use the data in some way if our goal was to predict the winner of the goal exchange? This may be possible, but it hardly offers any special information to sports people. It may even be that due to the correction of shooting percentages, the predicted number of goals will be a little too low. However, one option is to use, in addition to the player-specific corrected shooting percentages, the number of shots and the remaining matches.
 
-## Method
+## Model
 
-aaa
+
+
+$$Goals_i\ after \ season = Goals \ now_i\ + \sum^{j_i}_{j_i=0} Binomial(SPG_i, Adjusted\ Shooting_i\%)$$
+
+Where:
+
+$$SPG_i = Poisson(\lambda_i)$$
+$$ Adjusted\ Shooting\%_i =  Beta(\alpha_i, \beta_i)$$
+
+And: 
+
+$$\lambda_i\ = Shots\ of\ Player_i / Games\ of\ Player_ii$$ 
+
+$$\alpha_i\ = \alpha + Goals\ of\ player_i$$
+
+$$\beta_i\ = \beta + Shots\ of\ player_i$$. 
+
+Index $i ∈ 1,2,...k$ where k is number of players and index $j ∈ 0,1,...33$ describes the number of games left of players $i$ team.
+
+Our model is based on the following assumptions:
+
+-The player's shooting percentage follows a Beta distribution (see section: "Adjusted Shooting Percentages"). The adjusted shooting percentage is therefore the expected value of this posterior distribution.
+
+-The player's shooting rate in a game is assumed to be Poisson distributed with a parameter $\lambda_i$. As is well known, the expected value and variance of a Poisson distribution are equal. The estimate for $\lambda_i$ is the sample mean $Shots_i/Games_i$. In the same way as for shooting percentages, we could also correct for shooting numbers but since our goal is to predict the winner of the goal exchange, we will not do this (we assume that their shooting rates are plausible estimates of how many shots they will have in future games).
+
+-The player's remaining games in the season is a non-random number 33 minus the team's remaining games. We could also think of this as a random variable, but we won't do that here.
+
 
 ## Top 10: Top Scorers After Season
 
-aaaa
+```{r, echo = FALSE}
+top_10_final_goals <- read_csv("../data/summary_top_10_final_goals.csv")
+winner <- top_10_final_goals %>% select(PELAAJA) %>% head(1) %>% pull()
+goals_of_winner <- top_10_final_goals %>% select(Final_Goals) %>% head(1) %>% pull()
+goals_of_winner_low <- top_10_final_goals %>% select(Final_CI_Lower) %>% head(1) %>% pull()
+goals_of_winner_high <- top_10_final_goals %>% select(Final_CI_Upper) %>% head(1) %>% pull()
+```
+
+
+Finally, we can make predictions. We simulate the number of goals scored by each player. In the image below, the black arrow represents the number of goals scored at the moment, the square is the point estimate for the final number of goals scored, and the gray line represents the range where 80 percent of the simulated goals are located.The winner of goal exchange will be `r winner` with `r round(goals_of_winner,0)`. 80 percent of simulations locates between `r round(goals_of_winner_low,0)` and `r round(goals_of_winner_high,0)`.
 
 ```{r, echo = FALSE}
-top_10_final_goals <- read.csv("../data/summary_top_10_final_goals.csv")
+
 #
 ggplot(top_10_final_goals, aes(x = reorder(PELAAJA, Final_Goals))) +
   geom_segment(aes(
