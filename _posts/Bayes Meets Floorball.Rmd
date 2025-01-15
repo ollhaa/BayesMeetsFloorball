@@ -274,7 +274,7 @@ In this section, I will take some excerpts from the data. I will create five dif
   geom_hline(yintercept=eb_limit_09) +
   scale_x_continuous(breaks = seq(0,12,1)) +
   scale_y_continuous(labels = percent) + 
-  labs(title = "Adjusted Shooting Percentage vs. Shoots Per Game", x= "Shoots Per Game", y="Adjusted") +
+  labs(title = "Adjusted Shooting Percentage vs. Shots Per Game", x= "Shots Per Game", y="Adjusted") +
   theme_minimal()
 ```
 
