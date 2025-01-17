@@ -1,3 +1,7 @@
 # R-specific files
 .Rhistory
+.RData
 .Rproj.user
+BayesMeetsFloorball.Rproj
+_site.yml
+.nojekyll

@@ -1,17 +1,22 @@
+#Bring functions from Webscaping.R
 source("scripts/Webscraping.R")
-#
+#Libraries
 library(tidyverse)
 library(scales)
-#
+
+#Get datafrom web. Parameter means this + n seasons:
 #data <- get_data(4)
+#Games left in this season for every team:
 #games_left <- get_rest_games()
 #
 
-#
+#just for blog post
 #write_csv(data, file = "data/raw.csv")
 #write_csv(games_left, file = "data/games_left.csv")
-data <- read_csv("data/raw.csv")
-games_left <- read_csv("data/games_left.csv")
+
+#If you have saved data before:
+#data <- read_csv("data/raw.csv")
+#games_left <- read_csv("data/games_left.csv")
 #
 data$O <- as.numeric(data$O)
 data$M <- as.numeric(data$M)

@@ -11,7 +11,6 @@ output:
     toc: true
     toc_depth: 4
 repository_url: "https://github.com/ollhaa/BayesMeetsFloorball"
-site: distill::distill_website
 categories:
   - Floorball
   - Data Analysis
@@ -36,9 +35,9 @@ library(scales)
 #library(patchwork)
 
 ```
-*The idea for this blog came from the desire to combine floorball and data analysis and learn a little bit about web scraping. The methods are mainly from the* [Variance Explained blog](http://varianceexplained.org/r/empirical_bayes_baseball/). *I also noticed that the same idea has been used before by* [Ilari Scheinin](https://ilari.scheinin.fi/ranking-nhls-best-shooters/). *My own added value is to apply this to floorball, do explanatory data analysis and predict the final number of goals scored by each player.*
+*The idea for this blog post came from the desire to combine floorball and data analysis and learn a little bit about web scraping. The methods are mainly from the blog* [Variance Explained](http://varianceexplained.org/r/empirical_bayes_baseball/). *I also noticed that the same idea has been used before by* [Ilari Scheinin](https://ilari.scheinin.fi/ranking-nhls-best-shooters/). *My own added value is to apply this to floorball, do some explanatory data analysis and predict the final number of goals scored by each player.*
 
-*The data is from [F-liiga webpage](https://fliiga.com/fi/miehet/) and was obtained by web scraping.F-liiga is the highest level of floorball in Finland.*
+*The data is from [F-liiga](https://fliiga.com/fi/miehet/) and was obtained by web scraping. F-liiga is the highest level of floorball in Finland.*
 
 # Background
 
@@ -47,7 +46,7 @@ After Finland's World Cup gold, interest in the domestic league has not diminish
 As 6.1.2025 a little more than half of the season has been played in the F-Liiga and the situation regarding the top scorers is as follows:
 
 ```{r, echo=FALSE}
-players_2425_summary <- read_csv("docs/data/players_2425_summary.csv")
+players_2425_summary <- read_csv("data/players_2425_summary.csv")
 top_scorers <- players_2425_summary %>% select(PELAAJA,JOUKKUE,O,L,M,`M/O`,raw) %>% arrange(desc(M)) %>% head(10)
 new_names <- c("PLAYER", "TEAM", "Games", "Shots","Goals", "GPG", "Shooting%")
 colnames(top_scorers) <- new_names
@@ -72,7 +71,7 @@ Shooting percentage tells you how effectively a player takes advantage of scorin
 ## Observed Shooting Percentages
 
 ```{r, echo=FALSE}
-summary_top_10_raw <- read.csv("docs/data/summary_top_10_raw.csv")
+summary_top_10_raw <- read.csv("data/summary_top_10_raw.csv")
 summary_top_10_raw <- summary_top_10_raw %>% select(PELAAJA,JOUKKUE,O,L,M,M.O,raw) %>% arrange(desc(raw)) %>% head(10)
 new_names <- c("PLAYER", "TEAM", "Games", "Shots","Goals", "GPG", "Shooting%")
 colnames(summary_top_10_raw) <- new_names
@@ -154,7 +153,7 @@ In the image above, the gray histogram of the shooting percentages (with binwidt
 Next, let us look at what the adjusted shooting% looks like for the best players:
 
 ```{r, echo = FALSE}
-summary_top_10_eb <- read_csv("docs/data/summary_top_10_eb.csv")
+summary_top_10_eb <- read_csv("data/summary_top_10_eb.csv")
 #
 ggplot(summary_top_10_eb, aes(x = Adjusted, y = reorder(PELAAJA, -Rank))) +
   geom_point(size = 3) +  
@@ -200,7 +199,7 @@ The first one on the list is "r eb1", whose uncorrected (gray) shooting percenta
 Next, let us see how the top 10 adjusted shooting percentages change from uncorrected shooting percentages:
 
 ```{r, echo = FALSE}
-summary_top_10_raw <- read_csv("docs/data/summary_top_10_raw.csv")
+summary_top_10_raw <- read_csv("data/summary_top_10_raw.csv")
 #
 ggplot(summary_top_10_raw, aes(x = Adjusted, y = reorder(PELAAJA, -Rank))) +
   geom_point(size = 3) +  # Plot the points
@@ -282,7 +281,7 @@ In this section, I will take some excerpts from the data. I will create five dif
 I have highlighted two different groups in the image above. On the top right (light green) are players who have both an adjusted shooting percentage and shots per game in the top 10%. On the bottom right (red) are players who have a shot per game in the top 10% but an adjusted shooting percentage in the bottom 30%.
 
 ```{r, echo = FALSE}
-players_veryhigh_eb_veryhigh_spg <- read_csv("docs/data/players_veryhigh_eb_veryhigh_spg.csv")
+players_veryhigh_eb_veryhigh_spg <- read_csv("data/players_veryhigh_eb_veryhigh_spg.csv")
 players_veryhigh_eb_veryhigh_spg <- players_veryhigh_eb_veryhigh_spg %>% select(PELAAJA,JOUKKUE,O,L,M,`M/O`,Adjusted)
 players_veryhigh_eb_veryhigh_spg$`M/O` <- round(players_veryhigh_eb_veryhigh_spg$`M/O`,2)
 players_veryhigh_eb_veryhigh_spg$Adjusted <- round(players_veryhigh_eb_veryhigh_spg$Adjusted*100,2)
@@ -314,11 +313,11 @@ And:
 
 $$\lambda_i\ = Shots\ of\ Player_i / Games\ of\ Player_ii$$ 
 
-$$\alpha_i\ = \alpha + Goals\ of\ player_i$$
+$$\alpha_i\ = \alpha + Goals\ of\ Player_i$$
 
-$$\beta_i\ = \beta + Shots\ of\ player_i$$. 
+$$\beta_i\ = \beta + Shots\ of\ Player_i$$. 
 
-Index $i ∈ 1,2,...k$ where k is number of players and index $j ∈ 0,1,...33$ describes the number of games left of players $i$ team.
+Index $i ∈ 1,2,...k$ where $k$ is number of players and index $j ∈ 0,1,...33$ describes the number of games left of player's $i$ team.
 
 Our model is based on the following assumptions:
 
@@ -332,7 +331,7 @@ Our model is based on the following assumptions:
 ## Top 10: Top Scorers After Season
 
 ```{r, echo = FALSE}
-top_10_final_goals <- read_csv("docs/data/summary_top_10_final_goals.csv")
+top_10_final_goals <- read_csv("data/summary_top_10_final_goals.csv")
 winner <- top_10_final_goals %>% select(PELAAJA) %>% head(1) %>% pull()
 goals_of_winner <- top_10_final_goals %>% select(Final_Goals) %>% head(1) %>% pull()
 goals_of_winner_low <- top_10_final_goals %>% select(Final_CI_Lower) %>% head(1) %>% pull()

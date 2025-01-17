@@ -1,5 +1,5 @@
 #Web scraping + Bayes + Floorball
-#
+#Load libraries
 library(tidyverse)
 library(rvest)
 library(htmlTable)
@@ -119,6 +119,7 @@ get_data <- function(num_of_seasons){
   
 }
 
+#the games left fot each team
 get_rest_games <- function(){
   rD <- rsDriver(browser = "firefox",
                  chromever = NULL)
