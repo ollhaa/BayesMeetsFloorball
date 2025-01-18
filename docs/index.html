@@ -94,8 +94,8 @@ code span.wa { color: #5e5e5e; font-style: italic; } /* Warning */
 
 
   <!--  https://schema.org/Article -->
-  <meta property="article:published" itemprop="datePublished" content="2025-01-16"/>
-  <meta property="article:created" itemprop="dateCreated" content="2025-01-16"/>
+  <meta property="article:published" itemprop="datePublished" content="2025-01-18"/>
+  <meta property="article:created" itemprop="dateCreated" content="2025-01-18"/>
   <meta name="article:author" content="Olli Haapasalo"/>
 
   <!--  https://developers.facebook.com/docs/sharing/webmasters#markup -->
@@ -114,7 +114,7 @@ code span.wa { color: #5e5e5e; font-style: italic; } /* Warning */
   <!--radix_placeholder_rmarkdown_metadata-->
 
   <script type="text/json" id="radix-rmarkdown-metadata">
-  {"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["title","description","author","date","output","repository_url","categories"]}},"value":[{"type":"character","attributes":{},"value":["Bayes Meets Floorball: How to Evaluate Shooting Percentages?"]},{"type":"character","attributes":{},"value":["Estimating shooting percentages by using prior information. Also some predictions."]},{"type":"list","attributes":{},"value":[{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name"]}},"value":[{"type":"character","attributes":{},"value":["Olli Haapasalo"]}]}]},{"type":"character","attributes":{},"value":["2025-01-16"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["distill::distill_article"]}},"value":[{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["self_contained","toc","toc_depth"]}},"value":[{"type":"logical","attributes":{},"value":[false]},{"type":"logical","attributes":{},"value":[true]},{"type":"integer","attributes":{},"value":[4]}]}]},{"type":"character","attributes":{},"value":["https://github.com/ollhaa/BayesMeetsFloorball"]},{"type":"character","attributes":{},"value":["Floorball","Data Analysis"]}]}
+  {"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["title","description","author","date","output","repository_url","categories"]}},"value":[{"type":"character","attributes":{},"value":["Bayes Meets Floorball: How to Evaluate Shooting Percentages?"]},{"type":"character","attributes":{},"value":["Estimating shooting percentages by using prior information. Also some predictions."]},{"type":"list","attributes":{},"value":[{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name"]}},"value":[{"type":"character","attributes":{},"value":["Olli Haapasalo"]}]}]},{"type":"character","attributes":{},"value":["2025-01-18"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["distill::distill_article"]}},"value":[{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["self_contained","toc","toc_depth"]}},"value":[{"type":"logical","attributes":{},"value":[false]},{"type":"logical","attributes":{},"value":[true]},{"type":"integer","attributes":{},"value":[4]}]}]},{"type":"character","attributes":{},"value":["https://github.com/ollhaa/BayesMeetsFloorball"]},{"type":"character","attributes":{},"value":["Floorball","Data Analysis"]}]}
   </script>
   <!--/radix_placeholder_rmarkdown_metadata-->
   <!--radix_placeholder_navigation_in_header-->
@@ -1518,7 +1518,7 @@ code span.wa { color: #5e5e5e; font-style: italic; } /* Warning */
 <!--radix_placeholder_front_matter-->
 
 <script id="distill-front-matter" type="text/json">
-{"title":"Bayes Meets Floorball: How to Evaluate Shooting Percentages?","description":"Estimating shooting percentages by using prior information. Also some predictions.","authors":[{"author":"Olli Haapasalo","authorURL":"#","affiliation":"&nbsp;","affiliationURL":"#","orcidID":""}],"publishedDate":"2025-01-16T00:00:00.000+02:00","citationText":"Haapasalo, 2025"}
+{"title":"Bayes Meets Floorball: How to Evaluate Shooting Percentages?","description":"Estimating shooting percentages by using prior information. Also some predictions.","authors":[{"author":"Olli Haapasalo","authorURL":"#","affiliation":"&nbsp;","affiliationURL":"#","orcidID":""}],"publishedDate":"2025-01-18T00:00:00.000+02:00","citationText":"Haapasalo, 2025"}
 </script>
 
 <!--/radix_placeholder_front_matter-->
@@ -1542,7 +1542,7 @@ code span.wa { color: #5e5e5e; font-style: italic; } /* Warning */
 <div class="d-byline">
   Olli Haapasalo  
   
-<br/>2025-01-16
+<br/>2025-01-18
 </div>
 
 <div class="d-article">
@@ -1570,8 +1570,8 @@ code span.wa { color: #5e5e5e; font-style: italic; } /* Warning */
 </ul>
 </nav>
 </div>
-<p><em>The idea for this blog post came from the desire to combine floorball and data analysis and learn a little bit about web scraping. The methods are mainly from the</em> <a href="http://varianceexplained.org/r/empirical_bayes_baseball/">Variance Explained blog</a>. <em>I also noticed that the same idea has been used before by</em> <a href="https://ilari.scheinin.fi/ranking-nhls-best-shooters/">Ilari Scheinin</a>. <em>My own added value is to apply this to floorball, do some explanatory data analysis and predict the final number of goals scored by each player.</em></p>
-<p><em>The data is from <a href="https://fliiga.com/fi/miehet/">F-liiga</a> and was obtained by web scraping.F-liiga is the highest level of floorball in Finland.</em></p>
+<p><em>The idea for this blog post came from the desire to combine floorball and data analysis and learn a little bit about web scraping. The methods are mainly from the blog</em> <a href="http://varianceexplained.org/r/empirical_bayes_baseball/">Variance Explained</a>. <em>I also noticed that the same idea has been used before by</em> <a href="https://ilari.scheinin.fi/ranking-nhls-best-shooters/">Ilari Scheinin</a>. <em>My own added value is to apply this to floorball, do some explanatory data analysis and predict the final number of goals scored by each player.</em></p>
+<p><em>The data is from <a href="https://fliiga.com/fi/miehet/">F-liiga</a> and was obtained by web scraping. F-liiga is the highest level of floorball in Finland.</em></p>
 <h1 id="background">Background</h1>
 <p>After Finland’s World Cup gold, interest in the domestic league has not diminished at all. Most of the star players of the Finnish national team, such as Justus Kainulainen, Aaro Astala, Joona Rantala and Otto Lehkosuo play in the F-Liiga. The public’s interest is often focused on points and goals, so in this article I will discuss goal scoring in a slightly nerdy way.</p>
 <p>As 6.1.2025 a little more than half of the season has been played in the F-Liiga and the situation regarding the top scorers is as follows:</p>
@@ -1797,7 +1797,7 @@ code span.wa { color: #5e5e5e; font-style: italic; } /* Warning */
 </tbody>
 </table>
 </div>
-<p>At the time of writing, the highest shooting percentage in the F-League is Tuominen Sami, which has 10^{4}%. Impressive percentages on the list, but how should we think about this when we notice that there are often quite a few shots? Next, we will briefly review the foundation of Bayesian statistics, the Bayesian formula.</p>
+<p>At the time of writing, the highest shooting percentage in the F-League is Tuominen Sami, which has 100 %. Impressive percentages on the list, but how should we think about this when we notice that there are often quite a few shots? Next, we will briefly review the foundation of Bayesian statistics, the Bayesian formula.</p>
 <h2 id="bayesian-way">Bayesian Way</h2>
 <p>The Bayesian approach is the second major paradigm in statistics, with a history dating back to the 18th century. The Bayesian approach has been controversial because it makes inference subjective. Two people with very different preconceptions about something can disagree even though evidence has been found. However, in recent decades, the Bayesian approach has become more common as computers have become more powerful. The approach is particularly effective when there is little data but a broad preconception about something.</p>
 <p>The Bayesian approach thus involves combining prior knowledge with observations. Prior knowledge can be based on previous research or just one’s own preconceptions about the matter. Formally, Bayes’ theorem can be stated as follows:</p>

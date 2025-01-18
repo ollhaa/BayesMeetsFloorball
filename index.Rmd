@@ -84,7 +84,7 @@ raw <- summary_top_10_raw %>% select(`Shooting%`) %>% head(1) %>% pull()
 kable(summary_top_10_raw, caption = "The Highest Shooting Percetages")
 ```
 
-At the time of writing, the highest shooting percentage in the F-League is `r leader_raw`, which has `r raw*100`%. Impressive percentages on the list, but how should we think about this when we notice that there are often quite a few shots? Next, we will briefly review the foundation of Bayesian statistics, the Bayesian formula.
+At the time of writing, the highest shooting percentage in the F-League is `r leader_raw`, which has `r raw` %. Impressive percentages on the list, but how should we think about this when we notice that there are often quite a few shots? Next, we will briefly review the foundation of Bayesian statistics, the Bayesian formula.
 
 ## Bayesian Way
 
