@@ -4,7 +4,7 @@ description: "Estimating shooting percentages by using prior information. Also s
     
 author:
   - name: Olli Haapasalo
-date: "`r Sys.Date()`"
+
 output:
   distill::distill_article:
     self_contained: false
@@ -192,7 +192,7 @@ eb1_adjusted <- players_2425_summary %>% arrange(desc(eb_raw)) %>% head(1) %>% s
 ```
 
 
-The first one on the list is "r eb1", whose uncorrected (gray) shooting percentage is `r round(eb1_raw*100,2)` and adjusted (black) is `r round(eb1_adjusted*100,2)`. We notice that for some players on the list there is a difference between the adjusted and uncorrected percentages.
+The first one on the list is `r eb1`, whose uncorrected (gray) shooting percentage is `r round(eb1_raw*100,2)` and adjusted (black) is `r round(eb1_adjusted*100,2)`. We notice that for some players on the list there is a difference between the adjusted and uncorrected percentages.
 
 ## Top 10: Raw Percentages with Adjustment
 
